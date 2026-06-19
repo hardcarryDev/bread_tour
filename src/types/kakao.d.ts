@@ -39,8 +39,32 @@ declare global {
     setMap(map: KakaoMap | null): void;
   }
 
+  // Constructor / setOptions shape for a Circle overlay. `radius` is in metres.
+  interface KakaoCircleOptions {
+    center: KakaoLatLng;
+    radius: number;
+    strokeWeight?: number;
+    strokeColor?: string;
+    strokeOpacity?: number;
+    fillColor?: string;
+    fillOpacity?: number;
+    zIndex?: number;
+    map?: KakaoMap;
+  }
+
   interface KakaoPolyline {
     setMap(map: KakaoMap | null): void;
+  }
+
+  // Circle overlay. Used by MapView for the live "내 위치" indicator: a small
+  // filled blue dot at the user's position plus an optional larger translucent
+  // circle of the fix's accuracy radius (metres). Kept reusable so the marker
+  // can be repositioned/resized in place as the position changes.
+  interface KakaoCircle {
+    setMap(map: KakaoMap | null): void;
+    setPosition(latlng: KakaoLatLng): void;
+    setRadius(radius: number): void;
+    setOptions(options: KakaoCircleOptions): void;
   }
 
   interface KakaoMapsEvent {
@@ -147,6 +171,7 @@ declare global {
       zIndex?: number;
       map?: KakaoMap;
     }) => KakaoPolyline;
+    Circle: new (options: KakaoCircleOptions) => KakaoCircle;
     event: KakaoMapsEvent;
     // Services library (geocoder/directions) requested via `libraries=services`.
     services?: KakaoServices;

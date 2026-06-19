@@ -24,11 +24,22 @@ interface FakePolyline {
   setMap: ReturnType<typeof vi.fn>;
 }
 
+interface FakeCircle {
+  center: { lat: number; lng: number };
+  radius: number;
+  fillColor?: string;
+  setMap: ReturnType<typeof vi.fn>;
+  setPosition: ReturnType<typeof vi.fn>;
+  setRadius: ReturnType<typeof vi.fn>;
+  setOptions: ReturnType<typeof vi.fn>;
+}
+
 const created = {
   markers: [] as FakeMarker[],
   overlays: [] as FakeOverlay[],
   polylinePaths: [] as unknown[][],
   polylines: [] as FakePolyline[],
+  circles: [] as FakeCircle[],
 };
 
 const eventHandlers: Array<{ target: unknown; type: string; cb: () => void }> =
@@ -70,6 +81,32 @@ function makeKakao() {
       created.polylines.push(polyline);
       return polyline;
     }),
+    Circle: vi.fn(
+      (opts: {
+        center: { lat: number; lng: number };
+        radius: number;
+        fillColor?: string;
+      }) => {
+        const circle: FakeCircle = {
+          center: opts.center,
+          radius: opts.radius,
+          fillColor: opts.fillColor,
+          setMap: vi.fn(),
+          setPosition: vi.fn(function (this: FakeCircle, ll: {
+            lat: number;
+            lng: number;
+          }) {
+            this.center = ll;
+          }),
+          setRadius: vi.fn(function (this: FakeCircle, r: number) {
+            this.radius = r;
+          }),
+          setOptions: vi.fn(),
+        };
+        created.circles.push(circle);
+        return circle;
+      },
+    ),
     event: {
       addListener: vi.fn((target: unknown, type: string, cb: () => void) => {
         eventHandlers.push({ target, type, cb });
@@ -132,6 +169,7 @@ beforeEach(() => {
   created.overlays = [];
   created.polylinePaths = [];
   created.polylines = [];
+  created.circles = [];
   eventHandlers.length = 0;
   loadKakaoMaps.mockResolvedValue(makeKakao());
 });
@@ -308,6 +346,84 @@ describe('MapView route polyline (REQ-F2-001 / directions overlay)', () => {
 
     rerender(<MapView spots={spots} routePath={undefined} />);
     await waitFor(() => expect(route.setMap).toHaveBeenCalledWith(null));
+  });
+});
+
+describe('MapView "내 위치" live location marker (REQ-F3 location indicator)', () => {
+  // The spot order line + 3 spot markers are amber numbered pins; the user's own
+  // location must be a distinct blue dot (a Circle), updated live and removed
+  // when tracking stops. An accuracy circle is drawn when accuracy is provided.
+
+  it('does not draw a my-location marker when currentLocation is null', async () => {
+    render(<MapView spots={spots} currentLocation={null} />);
+    await waitFor(() => expect(created.markers.length).toBe(3));
+    // No Circle overlays from the location indicator (spots use Marker/Polyline).
+    expect(created.circles.length).toBe(0);
+  });
+
+  it('draws a blue dot at the current location while tracking', async () => {
+    render(
+      <MapView spots={spots} currentLocation={{ lat: 37.5, lng: 127.01 }} />,
+    );
+    await waitFor(() => expect(created.markers.length).toBe(3));
+    // A location dot Circle is created at the reported position.
+    await waitFor(() => expect(created.circles.length).toBeGreaterThanOrEqual(1));
+    const dot = created.circles.find((c) => c.fillColor === '#2563eb');
+    expect(dot).toBeDefined();
+    expect(dot!.center).toMatchObject({ lat: 37.5, lng: 127.01 });
+    // Drawn on the map.
+    expect(dot!.setMap).toHaveBeenCalled();
+  });
+
+  it('also draws a translucent accuracy circle when accuracy is provided', async () => {
+    render(
+      <MapView
+        spots={spots}
+        currentLocation={{ lat: 37.5, lng: 127.01, accuracy: 30 }}
+      />,
+    );
+    await waitFor(() => expect(created.markers.length).toBe(3));
+    // Two circles: the dot + the accuracy circle (radius == accuracy metres).
+    await waitFor(() => expect(created.circles.length).toBeGreaterThanOrEqual(2));
+    const accuracy = created.circles.find((c) => c.radius === 30);
+    expect(accuracy).toBeDefined();
+    expect(accuracy!.setMap).toHaveBeenCalled();
+  });
+
+  it('moves the existing dot in place when the location updates', async () => {
+    const { rerender } = render(
+      <MapView spots={spots} currentLocation={{ lat: 37.5, lng: 127.01 }} />,
+    );
+    await waitFor(() => expect(created.circles.length).toBeGreaterThanOrEqual(1));
+    const dot = created.circles.find((c) => c.fillColor === '#2563eb')!;
+    const circleCountBefore = created.circles.length;
+
+    rerender(
+      <MapView spots={spots} currentLocation={{ lat: 37.52, lng: 127.03 }} />,
+    );
+
+    // The dot is repositioned (not recreated): setPosition called, no new dot.
+    await waitFor(() => expect(dot.setPosition).toHaveBeenCalled());
+    expect(created.circles.length).toBe(circleCountBefore);
+    expect(dot.center).toMatchObject({ lat: 37.52, lng: 127.03 });
+  });
+
+  it('removes the my-location marker when tracking stops (currentLocation null)', async () => {
+    const { rerender } = render(
+      <MapView
+        spots={spots}
+        currentLocation={{ lat: 37.5, lng: 127.01, accuracy: 30 }}
+      />,
+    );
+    await waitFor(() => expect(created.circles.length).toBeGreaterThanOrEqual(2));
+    const dot = created.circles.find((c) => c.fillColor === '#2563eb')!;
+    const accuracy = created.circles.find((c) => c.radius === 30)!;
+
+    rerender(<MapView spots={spots} currentLocation={null} />);
+
+    // Both overlays are removed from the map.
+    await waitFor(() => expect(dot.setMap).toHaveBeenCalledWith(null));
+    await waitFor(() => expect(accuracy.setMap).toHaveBeenCalledWith(null));
   });
 });
 

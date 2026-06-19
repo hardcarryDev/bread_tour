@@ -18,18 +18,29 @@ interface MapViewProps {
   // DirectionsPanel/getRoute. Drawn as a distinct blue line over the gray
   // spot-order connector. undefined => no route overlay (cleared).
   routePath?: LatLng[];
+  // Live "내 위치" indicator while GPS tracking is active. lat/lng position the
+  // marker; optional accuracy (metres) draws a translucent accuracy circle.
+  // null/undefined => no marker (tracking off / position unknown). The value is
+  // in-memory only and never persisted (NFR-GEO-006 / A12); MapView just renders
+  // it and does not store it. It is intentionally NOT part of the spot-order
+  // polyline or setBounds so spot framing is unaffected.
+  currentLocation?: { lat: number; lng: number; accuracy?: number } | null;
 }
 
 // @MX:ANCHOR: [AUTO] MapView is the single Kakao rendering surface for the tour
-// (markers + numbered order overlays + connecting route line + tap summary).
+// (markers + numbered order overlays + connecting route line + live "내 위치"
+// indicator + tap summary).
 // @MX:REASON: REQ-F3-001..004 — markers, order numbers, route redraw on reorder,
-// and the tap summary are all anchored here; downstream slices (C stamp status,
-// D realtime) extend it via props rather than re-implementing the map.
+// the live location marker, and the tap summary are all anchored here; downstream
+// slices (C stamp status, D realtime) extend it via props rather than
+// re-implementing the map. Each overlay class (spots, route, my-location) is
+// managed in its own effect/ref so they update/clear independently.
 export default function MapView({
   spots,
   menusBySpot = {},
   stampBySpot = {},
   routePath,
+  currentLocation,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<KakaoMap | null>(null);
@@ -40,6 +51,10 @@ export default function MapView({
   const routeLineRef = useRef<{ setMap(map: KakaoMap | null): void } | null>(
     null,
   );
+  // "내 위치" overlays (blue dot + optional accuracy circle) are tracked in their
+  // own refs so they update/clear independently of the spot markers and route.
+  const meDotRef = useRef<KakaoCircle | null>(null);
+  const meAccuracyRef = useRef<KakaoCircle | null>(null);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Spot | null>(null);
@@ -154,12 +169,101 @@ export default function MapView({
     routeLineRef.current = line;
   }, [ready, routePath]);
 
-  // Clean up the route polyline on unmount.
+  // Draw / move / clear the live "내 위치" indicator. The marker is a small
+  // filled blue dot with a white-ish ring (visually distinct from the amber
+  // numbered spot pins), plus an optional translucent accuracy circle when the
+  // fix reports an accuracy radius. Kept in its own effect/refs so updating the
+  // position just moves the existing overlays (no redraw of spots/route), and
+  // setting currentLocation to null (tracking stopped) removes them. This marker
+  // is intentionally NOT added to the spot-order polyline or setBounds, so spot
+  // framing is unchanged (per requirement).
+  useEffect(() => {
+    if (!ready || !kakaoRef.current || !mapRef.current) return;
+    const kakao = kakaoRef.current;
+    const map = mapRef.current;
+
+    // No live position: remove any existing "내 위치" overlays and stop.
+    if (!currentLocation) {
+      if (meAccuracyRef.current) {
+        meAccuracyRef.current.setMap(null);
+        meAccuracyRef.current = null;
+      }
+      if (meDotRef.current) {
+        meDotRef.current.setMap(null);
+        meDotRef.current = null;
+      }
+      return;
+    }
+
+    const center = new kakao.maps.LatLng(
+      currentLocation.lat,
+      currentLocation.lng,
+    );
+    const hasAccuracy =
+      typeof currentLocation.accuracy === 'number' &&
+      currentLocation.accuracy > 0;
+
+    // Accuracy circle (optional): a translucent blue disc of the fix's radius.
+    if (hasAccuracy) {
+      const radius = currentLocation.accuracy as number;
+      if (meAccuracyRef.current) {
+        meAccuracyRef.current.setPosition(center);
+        meAccuracyRef.current.setRadius(radius);
+      } else {
+        const circle = new kakao.maps.Circle({
+          center,
+          radius,
+          strokeWeight: 1,
+          strokeColor: '#2563eb',
+          strokeOpacity: 0.4,
+          fillColor: '#3b82f6',
+          fillOpacity: 0.15,
+          zIndex: 4,
+        });
+        circle.setMap(map);
+        meAccuracyRef.current = circle;
+      }
+    } else if (meAccuracyRef.current) {
+      // Accuracy went away (e.g. a later fix without accuracy): drop the circle.
+      meAccuracyRef.current.setMap(null);
+      meAccuracyRef.current = null;
+    }
+
+    // Blue location dot: a small fixed-radius filled circle. Drawn above the
+    // accuracy circle so the precise point stays visible.
+    const DOT_RADIUS_M = 6;
+    if (meDotRef.current) {
+      meDotRef.current.setPosition(center);
+    } else {
+      const dot = new kakao.maps.Circle({
+        center,
+        radius: DOT_RADIUS_M,
+        strokeWeight: 2,
+        strokeColor: '#ffffff',
+        strokeOpacity: 0.9,
+        fillColor: '#2563eb',
+        fillOpacity: 1,
+        zIndex: 6,
+      });
+      dot.setMap(map);
+      meDotRef.current = dot;
+    }
+  }, [ready, currentLocation]);
+
+  // Clean up the route polyline and "내 위치" overlays on unmount.
   useEffect(() => {
     return () => {
       if (routeLineRef.current) {
         routeLineRef.current.setMap(null);
         routeLineRef.current = null;
+      }
+      if (meAccuracyRef.current) {
+        meAccuracyRef.current.setMap(null);
+        meAccuracyRef.current = null;
+      }
+      if (meDotRef.current) {
+        meDotRef.current.setMap(null);
+        meDotRef.current = null;
       }
     };
   }, []);

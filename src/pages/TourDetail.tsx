@@ -486,6 +486,10 @@ export default function TourDetail() {
             menusBySpot={menusBySpot}
             stampBySpot={stampBySpot}
             routePath={routePath}
+            // Live "내 위치" marker while GPS tracking is active. This is the
+            // same in-memory fix used for directions (NFR-GEO-006: never
+            // persisted); it appears while tracking and clears to null on stop.
+            currentLocation={geo.currentPosition}
           />
         </Suspense>
 

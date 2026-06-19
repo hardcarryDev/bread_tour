@@ -45,12 +45,16 @@ export interface UseGeoStampOptions {
   isSecureContext?: boolean;
 }
 
-// In-memory position used only for live routing (directions to the next spot).
-// This is NEVER persisted to the DB (NFR-GEO-006 / A12); it lives in hook state
-// for as long as tracking is active and is cleared when tracking stops.
+// In-memory position used only for live routing (directions to the next spot)
+// and the map's "내 위치" indicator. This is NEVER persisted to the DB
+// (NFR-GEO-006 / A12); it lives in hook state for as long as tracking is active
+// and is cleared when tracking stops. `accuracy` is the latest fix's reported
+// radius in metres (when the device provides it) so the map can draw a
+// translucent accuracy circle; it is in-memory only, same as lat/lng.
 export interface CurrentPosition {
   lat: number;
   lng: number;
+  accuracy?: number;
 }
 
 export interface UseGeoStampResult {
@@ -59,9 +63,11 @@ export interface UseGeoStampResult {
   permissionDenied: boolean;
   error: string | null;
   purpose: string;
-  // Latest in-memory GPS fix (lat/lng) while tracking, or null when unknown.
-  // Used by directions to route from the user's current location (REQ-F2-003);
-  // it is intentionally in-memory only and never stored (NFR-GEO-006 / A12).
+  // Latest in-memory GPS fix (lat/lng + optional accuracy in metres) while
+  // tracking, or null when unknown. Used by directions to route from the user's
+  // current location (REQ-F2-003) and by the map to show the live "내 위치"
+  // marker + accuracy circle; it is intentionally in-memory only and never
+  // stored (NFR-GEO-006 / A12).
   currentPosition: CurrentPosition | null;
   start: () => void;
   pause: () => void;
@@ -144,9 +150,15 @@ export function useGeoStamp(options: UseGeoStampOptions): UseGeoStampResult {
 
   const handleSample = useCallback((sample: GeoSample) => {
     if (!trackingRef.current) return; // ignore late callbacks after pause/stop
-    // Record the latest fix in-memory for live routing (REQ-F2-003). This is
-    // never persisted (NFR-GEO-006 / A12) and is cleared when tracking stops.
-    setCurrentPosition({ lat: sample.lat, lng: sample.lng });
+    // Record the latest fix in-memory for live routing (REQ-F2-003) and the
+    // map's "내 위치" indicator. This is never persisted (NFR-GEO-006 / A12) and
+    // is cleared when tracking stops. accuracy (metres) rides along so the map
+    // can draw the accuracy circle; it stays in-memory like lat/lng.
+    setCurrentPosition({
+      lat: sample.lat,
+      lng: sample.lng,
+      accuracy: sample.accuracy,
+    });
     // Treat spots we have already optimistically stamped this watch as visited,
     // so a second arrival before reloadStamps() refreshes stampedSpotIds does
     // not produce a duplicate onStamp (H-03 / AC-A4).

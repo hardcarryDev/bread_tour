@@ -159,12 +159,15 @@ vi.mock('../features/map/MapView', () => ({
   default: ({
     spots,
     routePath,
+    currentLocation,
   }: {
     spots: { id: string }[];
     routePath?: { lat: number; lng: number }[];
+    currentLocation?: { lat: number; lng: number; accuracy?: number } | null;
   }) => (
     <div data-testid="map-view">
-      map:{spots.length} route:{routePath ? routePath.length : 'none'}
+      map:{spots.length} route:{routePath ? routePath.length : 'none'} me:
+      {currentLocation ? JSON.stringify(currentLocation) : 'null'}
     </div>
   ),
 }));
@@ -627,6 +630,37 @@ describe('TourDetail directions wiring (C-01 / REQ-F2-003)', () => {
     expect(screen.getByTestId('directions-panel')).toHaveTextContent(
       'loc:{"lat":37.49,"lng":127.01}',
     );
+  });
+
+  it('passes the in-memory GPS position to MapView as currentLocation (내 위치 marker)', async () => {
+    getMyRole.mockResolvedValue('member');
+    // While tracking, the GPS hook reports an in-memory fix (lat/lng + accuracy,
+    // never persisted). TourDetail must forward it to MapView so the live "내
+    // 위치" marker is drawn.
+    useGeoStamp.mockReturnValue({
+      tracking: true,
+      accuracyWarning: false,
+      permissionDenied: false,
+      error: null,
+      purpose: '도착 시 자동으로 스탬프를 적립하기 위해 위치 정보를 사용합니다.',
+      currentPosition: { lat: 37.49, lng: 127.01, accuracy: 12 },
+      start: vi.fn(),
+      pause: vi.fn(),
+      stop: vi.fn(),
+    });
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+    expect(screen.getByTestId('map-view')).toHaveTextContent(
+      'me:{"lat":37.49,"lng":127.01,"accuracy":12}',
+    );
+  });
+
+  it('passes a null current location to MapView when tracking is off (no 내 위치 marker)', async () => {
+    getMyRole.mockResolvedValue('member');
+    // Default useGeoStamp mock reports currentPosition: null (tracking off).
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+    expect(screen.getByTestId('map-view')).toHaveTextContent('me:null');
   });
 
   it('forwards the computed route path to MapView so the real road line is drawn', async () => {

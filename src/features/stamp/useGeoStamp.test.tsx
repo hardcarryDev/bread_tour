@@ -206,10 +206,12 @@ describe('useGeoStamp in-memory currentPosition for routing (C-01 / REQ-F2-003)'
     );
 
     // The latest fix is exposed in-memory (NOT persisted) so directions can
-    // route from the user's current location.
+    // route from the user's current location and the map can draw the "내 위치"
+    // marker. accuracy (metres) rides along for the map's accuracy circle.
     expect(result.current.currentPosition).toEqual({
       lat: 37.4999,
       lng: 127.0123,
+      accuracy: 8,
     });
   });
 
