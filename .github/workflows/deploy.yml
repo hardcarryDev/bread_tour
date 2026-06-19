@@ -1,0 +1,71 @@
+name: Deploy to GitHub Pages
+
+# Build the Vite SPA and publish it to GitHub Pages on every push to main.
+# Also runnable on demand from the Actions tab (workflow_dispatch).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least-privilege permissions required by the official Pages deployment flow.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one in-flight Pages deployment at a time. Do NOT cancel a running
+# deploy (cancel-in-progress: false) so a publish completes cleanly.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          # Repo-name-agnostic base path: "/<repo>/". Vite reads this as `base`,
+          # which also drives import.meta.env.BASE_URL (router basename + assets).
+          BASE_PATH: "/${{ github.event.repository.name }}/"
+          # Public, build-time client env vars sourced from repo *Variables*
+          # (Settings -> Secrets and variables -> Actions -> Variables). These
+          # are safe to expose in the bundle; server-side keys live in the Edge
+          # Function and are never injected here.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_KAKAO_MAP_APP_KEY: ${{ vars.VITE_KAKAO_MAP_APP_KEY }}
+        # Runs `tsc -b && vite build`, then the `postbuild` script copies
+        # dist/index.html -> dist/404.html for SPA deep-link fallback.
+        run: npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

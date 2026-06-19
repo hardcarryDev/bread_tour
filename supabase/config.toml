@@ -1,0 +1,18 @@
+# Supabase CLI project config for the bread tour app (SPEC-BREADTOUR-001).
+# Minimal config for local development with `supabase start` / `supabase db reset`.
+# Full reference: https://supabase.com/docs/guides/cli/config
+
+project_id = "bread-tour"
+
+[db]
+# Postgres major version used by the local stack. Match your hosted project.
+major_version = 17
+
+[realtime]
+enabled = true
+
+[auth]
+# Local dev only. Replace with your real site URL in hosted environments.
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+enable_signup = true

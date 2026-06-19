@@ -1,0 +1,602 @@
+/* Mobile-first layout (NFR-RESP-001/002). Base styles target a 360px-wide
+   viewport; the max-width cap keeps it readable on desktop. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem 1rem;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.page h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.page h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.page-header,
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.muted {
+  opacity: 0.7;
+  margin: 0;
+}
+
+/* Forms ------------------------------------------------------------------ */
+.auth-form,
+.modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+input {
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Touch-friendly hit targets (NFR-RESP-002): min 44px tall. */
+button {
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  background: #b5651d;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.link-button {
+  background: none;
+  color: #b5651d;
+  border: none;
+  padding: 0.4rem;
+  min-height: 44px;
+}
+
+button.danger {
+  background: #c0392b;
+}
+
+.form-error {
+  color: #c0392b;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Signup "check your email" notice (Feature 2): informational, not an error. */
+.form-notice {
+  color: #1e6b3a;
+  background: #eaf7ef;
+  border: 1px solid #bfe6cd;
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* App nav (정보 변경 entry point) ---------------------------------------- */
+/* Mobile-friendly: wraps under the page title on narrow screens (NFR-RESP). */
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.app-nav-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.app-nav-link {
+  color: #b5651d;
+  font-size: 0.9rem;
+  text-decoration: none;
+  padding: 0.4rem;
+}
+
+.app-nav-link:hover {
+  text-decoration: underline;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Read-only field (e.g. email on the 정보 변경 page): looks like a value, not
+   an editable input, so users cannot mistake it for something they can change. */
+.readonly-field {
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #eee;
+  border-radius: 0.5rem;
+  background: #f6f6f6;
+  margin: 0;
+  word-break: break-all;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Lists ------------------------------------------------------------------ */
+.tour-list,
+.member-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tour-list a {
+  display: block;
+  padding: 0.75rem;
+  border: 1px solid #e0d5c5;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.member-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.role-badge {
+  align-self: flex-start;
+  background: #efe3d2;
+  color: #6b4a1f;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.invite-link code {
+  word-break: break-all;
+}
+
+.spots-placeholder {
+  border: 1px dashed #c9b89a;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.danger-zone {
+  margin-top: 1rem;
+}
+
+/* Modal ------------------------------------------------------------------ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal {
+  background: #fff;
+  color: #222;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modal-actions,
+.invite-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.route-loading {
+  padding: 2rem 1rem;
+  text-align: center;
+  opacity: 0.7;
+}
+
+/* Directions travel-mode tabs (도보/대중교통/차) — KakaoMap-style segmented
+   control. Mobile-first: full-width row, equal large touch targets (NFR-RESP). */
+.mode-tabs {
+  display: flex;
+  gap: 0;
+  width: 100%;
+  border: 1px solid #d8c6a8;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.mode-tab {
+  flex: 1 1 0;
+  min-height: 44px; /* touch target (NFR-RESP-002) */
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  color: #6b4a1f;
+  font-weight: 600;
+}
+
+.mode-tab + .mode-tab {
+  border-left: 1px solid #e0d5c5;
+}
+
+.mode-tab[aria-pressed='true'] {
+  background: #b5651d;
+  color: #fff;
+}
+
+/* Transit itinerary breakdown — compact, wraps safely at 360px (NFR-RESP). */
+.route-legs {
+  list-style: none;
+  margin: 0.25rem 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.4rem;
+  font-size: 0.9rem;
+}
+
+.route-leg {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: #efe3d2;
+  color: #6b4a1f;
+}
+
+.route-leg-sep {
+  opacity: 0.6;
+}
+
+/* --- Slice B: spots, map, reorder (NFR-RESP: 360px-safe, no h-scroll) --- */
+.spots-panel {
+  margin-top: 1.5rem;
+}
+
+.spot-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.spot-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.spot-order {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #d97706;
+  color: #fff;
+  font-weight: 600;
+}
+
+.spot-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.spot-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.spot-actions button {
+  min-width: 2.25rem;
+  min-height: 2.25rem; /* touch target (NFR-RESP-002) */
+}
+
+.spot-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.spot-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.spot-form input,
+.spot-form select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Interactive location picker (A8) — full-screen modal, mobile-friendly. */
+.location-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.location-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 640px;
+  height: 100%;
+  max-height: 100%;
+  padding: 0.75rem;
+  background: #fff;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.location-picker-search {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.location-picker-search input {
+  flex: 1;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.location-picker-search button {
+  min-height: 44px;
+  padding: 0 1rem;
+}
+
+.location-picker-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 30vh;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.location-picker-result {
+  width: 100%;
+  text-align: left;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+}
+
+.location-picker-result:hover,
+.location-picker-result:focus {
+  background: #fef3c7;
+}
+
+.location-picker-canvas {
+  flex: 1;
+  min-height: 320px;
+  width: 100%;
+  border-radius: 0.5rem;
+  background: #f3f4f6;
+}
+
+.location-picker-hint {
+  margin: 0;
+}
+
+.location-picker-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.location-picker-actions button {
+  min-height: 44px;
+  flex: 1;
+}
+
+.location-picker-actions .link-button {
+  flex: 0 0 auto;
+}
+
+.map-view {
+  position: relative;
+  margin-top: 1rem;
+}
+
+.map-canvas {
+  width: 100%;
+  height: 280px;
+  border-radius: 0.5rem;
+  background: #f3f4f6;
+}
+
+.map-view-error {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.marker-summary {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  max-width: calc(100% - 1rem);
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.marker-summary h3 {
+  margin: 0.25rem 0;
+}
+
+.marker-summary ul {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+
+/* Slice D — realtime collaboration UI (F5). Mobile-first, no horizontal
+   overflow at 360px (NFR-RESP-001). */
+.collab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.connected-members {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.connected-label {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.connected-count {
+  display: inline-flex;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #2e7d32;
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.connected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connected-member {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.offline-indicator {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #fff3e0;
+  color: #e65100;
+  font-size: 0.9rem;
+}
+
+.toast-host {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(92vw, 28rem);
+  z-index: 1000;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  background: #263238;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  font-size: 0.9rem;
+}
+
+.toast-dismiss {
+  color: #90caf9;
+  flex-shrink: 0;
+}
