@@ -343,6 +343,26 @@ button.danger {
   word-break: break-word;
 }
 
+/* "내기준정렬" + "장소 추가" action group; wraps and stays usable at 360px. */
+.spots-panel-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Green one-line distance caption under each spot row (Feature). Full-width so
+   it sits on its own line below the name/kind/actions. */
+.spot-distance {
+  flex: 1 0 100%;
+  color: #16a34a;
+  font-size: 0.8rem;
+}
+
+.spot-distance-failed {
+  flex: 1 0 100%;
+  font-size: 0.8rem;
+}
+
 .spot-actions {
   display: flex;
   gap: 0.25rem;

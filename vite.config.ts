@@ -25,6 +25,17 @@ export default defineConfig({
     // failures (e.g. "X is not a spy"). Forks runs the same transform pipeline
     // correctly, so `npm test` gives a true signal.
     pool: 'forks',
+    // Cap fork concurrency. With the default unbounded fork count this machine
+    // oversubscribes its cores, and the resulting contention intermittently
+    // drops Vitest's `vi.mock` hoisting transform on some files — producing the
+    // same FALSE "X is not a spy" failures as the threads pool. Pinning a small
+    // pool keeps the transform pipeline deterministic so `npm test` is reliable.
+    poolOptions: {
+      forks: {
+        minForks: 1,
+        maxForks: 2,
+      },
+    },
     // Dummy public env vars so src/lib/supabase.ts does not throw during tests.
     // These are NOT real keys; the Supabase client is mocked in each test.
     env: {

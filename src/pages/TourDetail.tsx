@@ -32,7 +32,9 @@ import StampTracker from '../features/stamp/StampTracker';
 import StampProgress from '../features/stamp/StampProgress';
 import ManualCheckIn from '../features/stamp/ManualCheckIn';
 import DirectionsPanel from '../features/directions/DirectionsPanel';
-import type { LatLng } from '../features/directions/route';
+import { getRoute } from '../features/directions/api';
+import type { LatLng, TravelMode } from '../features/directions/route';
+import type { SpotDistance } from '../features/map/SpotList';
 import {
   spotConflictValue,
   useRealtimeTour,
@@ -76,6 +78,22 @@ export default function TourDetail() {
   // onRoute callback so the actual Kakao road polyline is drawn, not just the
   // straight spot-order connector. undefined => no route currently shown.
   const [routePath, setRoutePath] = useState<LatLng[] | undefined>(undefined);
+
+  // Selected travel mode, lifted from DirectionsPanel so BOTH the directions
+  // toggle AND the "내기준정렬" button read the same mode (Feature). Default 차/car.
+  const [travelMode, setTravelMode] = useState<TravelMode>('car');
+
+  // "내기준정렬" local view sort state (Feature). This is a PERSONAL view sort —
+  // it never calls reorder_spots or changes order_index. When `sortMode` is set,
+  // SpotList displays spots by ascending distance and shows the green captions.
+  //   - distanceBySpot: per-spot { distanceM, durationSec, fallback } or null on
+  //     failure, keyed by spot id (in-memory only).
+  //   - sorting: button loading state while distances compute.
+  const [distanceBySpot, setDistanceBySpot] = useState<
+    Record<string, SpotDistance | null>
+  >({});
+  const [sortMode, setSortMode] = useState<TravelMode | null>(null);
+  const [sorting, setSorting] = useState(false);
 
   const isOwner = role === 'owner';
 
@@ -322,6 +340,79 @@ export default function TourDetail() {
     }
   }
 
+  // Resolve the user's current location for the local sort. Prefer the live
+  // in-memory GPS fix (NFR-GEO-006: never persisted); if tracking is off, take a
+  // ONE-SHOT navigator.geolocation fix (also in-memory only — never stored).
+  // Resolves null when location is denied/unavailable so the caller can show a
+  // clear message and skip sorting.
+  function resolveCurrentLocation(): Promise<LatLng | null> {
+    if (geo.currentPosition) {
+      return Promise.resolve({
+        lat: geo.currentPosition.lat,
+        lng: geo.currentPosition.lng,
+      });
+    }
+    const geolocation =
+      typeof navigator !== 'undefined' ? navigator.geolocation : undefined;
+    if (!geolocation) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      geolocation.getCurrentPosition(
+        (pos) =>
+          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve(null), // permission denied / unavailable
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15_000 },
+      );
+    });
+  }
+
+  // "내기준정렬": compute each spot's distance from the user's current location
+  // using the CURRENTLY SELECTED travel mode, then display the list ascending by
+  // distance (closest first) with a green per-spot caption (Feature). LOCAL VIEW
+  // ONLY — this never persists order (no reorder_spots / no order_index change).
+  async function handleSortByMyDistance() {
+    setActionError(null);
+    const origin = await resolveCurrentLocation();
+    if (!origin) {
+      // Denied / unavailable: do NOT sort; surface a clear Korean message.
+      setActionError(
+        '현재 위치를 가져올 수 없습니다. 위치 권한을 허용해 주세요.',
+      );
+      return;
+    }
+    const mode = travelMode;
+    setSorting(true);
+    try {
+      // Compute all spot distances in parallel with the selected mode.
+      const results = await Promise.all(
+        spots.map(async (spot) => {
+          try {
+            const route = await getRoute(
+              origin,
+              { lat: spot.lat, lng: spot.lng },
+              { mode },
+            );
+            return [
+              spot.id,
+              {
+                distanceM: route.distanceM,
+                durationSec: route.durationSec,
+                fallback: route.fallback,
+              } as SpotDistance,
+            ] as const;
+          } catch {
+            // A failed spot sorts last and shows no caption.
+            return [spot.id, null] as const;
+          }
+        }),
+      );
+      setDistanceBySpot(Object.fromEntries(results));
+      // Caption the rows with the mode that was actually used for THIS sort.
+      setSortMode(mode);
+    } finally {
+      setSorting(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="page">
@@ -424,16 +515,28 @@ export default function TourDetail() {
       >
         <div className="section-head">
           <h2>장소</h2>
-          {/* Any member may add a spot (REQ-F6-005). */}
-          <button
-            type="button"
-            onClick={() => {
-              setEditingSpot(null);
-              setShowSpotForm((v) => !v);
-            }}
-          >
-            장소 추가
-          </button>
+          <div className="spots-panel-actions">
+            {/* "내기준정렬" (Feature): personal distance sort, to the LEFT of
+                "장소 추가". Uses the currently selected travel mode and the
+                user's current location; LOCAL VIEW ONLY (never persisted). */}
+            <button
+              type="button"
+              onClick={() => void handleSortByMyDistance()}
+              disabled={sorting}
+            >
+              {sorting ? '정렬 중…' : '내기준정렬'}
+            </button>
+            {/* Any member may add a spot (REQ-F6-005). */}
+            <button
+              type="button"
+              onClick={() => {
+                setEditingSpot(null);
+                setShowSpotForm((v) => !v);
+              }}
+            >
+              장소 추가
+            </button>
+          </div>
         </div>
 
         {showSpotForm && (
@@ -470,6 +573,10 @@ export default function TourDetail() {
               setShowSpotForm(false);
               setEditingSpot(s);
             }}
+            // Personal distance sort (Feature): display by distance + show the
+            // green captions. order_index / shared plan order is untouched.
+            sortMode={sortMode}
+            distanceBySpot={distanceBySpot}
           />
         )}
 
@@ -505,6 +612,10 @@ export default function TourDetail() {
           // result.path is the decoded Kakao road geometry (or [from,to] on the
           // straight-line fallback); MapView renders it as a distinct route line.
           onRoute={(result) => setRoutePath(result.path)}
+          // Shared travel mode (Feature): the toggle here and the "내기준정렬"
+          // button read/write the same selected mode.
+          mode={travelMode}
+          onModeChange={setTravelMode}
         />
       </section>
 

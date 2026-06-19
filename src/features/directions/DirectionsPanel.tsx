@@ -34,6 +34,13 @@ interface DirectionsPanelProps {
   currentLocation: LatLng | null;
   // Emits the computed route so the parent/map can render its polyline.
   onRoute: (route: RouteResult) => void;
+  // Optional controlled travel mode. When `mode` + `onModeChange` are provided,
+  // the panel is controlled and the parent owns the selected mode so it can be
+  // shared with the "내기준정렬" button (which routes with the same mode). When
+  // omitted, the panel keeps its own internal mode state (default 차/car) and
+  // behaves exactly as before.
+  mode?: TravelMode;
+  onModeChange?: (mode: TravelMode) => void;
 }
 
 // Travel-mode tab definitions, ordered like the KakaoMap app: 도보 / 대중교통 / 차.
@@ -82,6 +89,8 @@ export default function DirectionsPanel({
   stampedSpotIds,
   currentLocation,
   onRoute,
+  mode: controlledMode,
+  onModeChange,
 }: DirectionsPanelProps) {
   const ordered = useMemo(
     () => [...spots].sort((a, b) => a.order_index - b.order_index),
@@ -89,7 +98,15 @@ export default function DirectionsPanel({
   );
   const [fromId, setFromId] = useState('');
   const [toId, setToId] = useState('');
-  const [mode, setMode] = useState<TravelMode>('car');
+  // Controlled when the parent supplies `mode`; otherwise keep internal state so
+  // standalone usage (and existing tests) work unchanged. Default stays 차/car.
+  const [internalMode, setInternalMode] = useState<TravelMode>('car');
+  const isControlled = controlledMode != null;
+  const mode = isControlled ? controlledMode : internalMode;
+  const setMode = (next: TravelMode) => {
+    if (isControlled) onModeChange?.(next);
+    else setInternalMode(next);
+  };
   const [route, setRoute] = useState<RouteResult | null>(null);
   // The mode that was requested for the currently shown route — used to caption
   // a fallback correctly (e.g. a walk request that fell back to a straight line).

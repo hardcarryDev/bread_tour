@@ -123,16 +123,30 @@ vi.mock('../features/directions/DirectionsPanel', () => ({
   // Echo the currentLocation prop so a test can assert TourDetail wires the
   // in-memory GPS position through to directions (C-01 / REQ-F2-003). Expose a
   // button that emits a route via onRoute so a test can verify the resulting
-  // path flows through to the map (real road polyline rendering).
+  // path flows through to the map (real road polyline rendering). Also echo the
+  // shared `mode` prop and expose a button to switch it via onModeChange so a
+  // test can verify the 내기준정렬 button reads the same selected mode.
   default: ({
     currentLocation,
     onRoute,
+    mode,
+    onModeChange,
   }: {
     currentLocation: unknown;
     onRoute: (route: { path: { lat: number; lng: number }[] }) => void;
+    mode?: string;
+    onModeChange?: (m: string) => void;
   }) => (
     <div data-testid="directions-panel">
       loc:{currentLocation ? JSON.stringify(currentLocation) : 'null'}
+      mode:{mode}
+      <button
+        type="button"
+        data-testid="set-mode-transit"
+        onClick={() => onModeChange?.('transit')}
+      >
+        set transit
+      </button>
       <button
         type="button"
         data-testid="emit-route"
@@ -150,6 +164,14 @@ vi.mock('../features/directions/DirectionsPanel', () => ({
       </button>
     </div>
   ),
+}));
+
+// getRoute powers the per-spot distance computation for 내기준정렬. Mock it with
+// deterministic distances keyed by destination so tests can assert the sort
+// order and the captions independently of the real Edge Function.
+const getRoute = vi.fn();
+vi.mock('../features/directions/api', () => ({
+  getRoute: (...a: unknown[]) => getRoute(...a),
 }));
 
 // Stub the heavy Kakao MapView so TourDetail tests do not need the SDK. Echo the
@@ -288,6 +310,28 @@ beforeEach(() => {
     notePendingEdit: vi.fn(),
   });
   useProfiles.mockReturnValue({ u1: '빵돌이', u2: '빵순이' });
+  // Deterministic per-spot distances keyed by destination coordinate.
+  // s1 (lat 37.5) is FAR (1500m); s2 (lat 37.56) is NEAR (400m).
+  getRoute.mockImplementation(
+    (_from: unknown, to: { lat: number }) => {
+      if (to.lat === 37.5) {
+        return Promise.resolve({
+          mode: 'car',
+          path: [],
+          distanceM: 1500,
+          durationSec: 540,
+          fallback: false,
+        });
+      }
+      return Promise.resolve({
+        mode: 'car',
+        path: [],
+        distanceM: 400,
+        durationSec: 300,
+        fallback: false,
+      });
+    },
+  );
 });
 
 describe('TourDetail permission UI (REQ-F6-004/005/006 / AC-F6-04..06)', () => {
@@ -674,5 +718,165 @@ describe('TourDetail directions wiring (C-01 / REQ-F2-003)', () => {
     // that full path down to MapView as routePath (not just the 2 endpoints).
     await userEvent.click(screen.getByTestId('emit-route'));
     expect(screen.getByTestId('map-view')).toHaveTextContent('route:3');
+  });
+});
+
+describe('TourDetail "내기준정렬" local distance sort (Feature)', () => {
+  // Provide a current GPS position so the sort can compute distances without
+  // touching navigator.geolocation. The button sits left of "장소 추가".
+  function withGeo(currentPosition: { lat: number; lng: number } | null) {
+    useGeoStamp.mockReturnValue({
+      tracking: currentPosition != null,
+      accuracyWarning: false,
+      permissionDenied: false,
+      error: null,
+      purpose: 'p',
+      currentPosition,
+      start: vi.fn(),
+      pause: vi.fn(),
+      stop: vi.fn(),
+    });
+  }
+
+  it('renders the 내기준정렬 button to the LEFT of 장소 추가', async () => {
+    getMyRole.mockResolvedValue('member');
+    withGeo({ lat: 37.49, lng: 127.01 });
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+    const panel = within(screen.getByTestId('spots-panel'));
+    const sortBtn = panel.getByRole('button', { name: '내기준정렬' });
+    const addBtn = panel.getByRole('button', { name: '장소 추가' });
+    expect(sortBtn).toBeInTheDocument();
+    // DOM order: 내기준정렬 comes before 장소 추가 (left of it).
+    expect(
+      sortBtn.compareDocumentPosition(addBtn) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('sorts the spot rows by ascending distance (closest first) on click', async () => {
+    getMyRole.mockResolvedValue('member');
+    withGeo({ lat: 37.49, lng: 127.01 });
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+
+    // Before sort: plan order (s1 성수 베이커리, then s2 연남 식당).
+    let spotItems = screen
+      .getAllByRole('listitem')
+      .filter((li) => /베이커리|식당/.test(li.textContent ?? ''));
+    expect(spotItems[0]).toHaveTextContent('성수 베이커리');
+
+    await userEvent.click(screen.getByRole('button', { name: '내기준정렬' }));
+
+    // After sort: s2 (연남 식당, 400m) is closer than s1 (성수, 1500m).
+    await waitFor(() => {
+      spotItems = screen
+        .getAllByRole('listitem')
+        .filter((li) => /베이커리|식당/.test(li.textContent ?? ''));
+      expect(spotItems[0]).toHaveTextContent('연남 식당');
+    });
+    expect(getRoute).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the green caption with the selected mode label, distance, and time', async () => {
+    getMyRole.mockResolvedValue('member');
+    withGeo({ lat: 37.49, lng: 127.01 });
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+
+    await userEvent.click(screen.getByRole('button', { name: '내기준정렬' }));
+
+    await waitFor(() => {
+      const captions = screen.getAllByTestId('spot-distance');
+      expect(captions).toHaveLength(2);
+    });
+    const captions = screen.getAllByTestId('spot-distance');
+    // Default mode is car (자동차); closest first.
+    expect(captions[0]).toHaveTextContent('자동차 기준 거리: 400m 예상 시간: 5분');
+    expect(captions[1]).toHaveTextContent(
+      '자동차 기준 거리: 1.5km 예상 시간: 9분',
+    );
+  });
+
+  it('uses the mode selected in the DirectionsPanel toggle', async () => {
+    getMyRole.mockResolvedValue('member');
+    withGeo({ lat: 37.49, lng: 127.01 });
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+
+    // Switch the shared mode to 대중교통 via the DirectionsPanel toggle.
+    await userEvent.click(screen.getByTestId('set-mode-transit'));
+    // DirectionsPanel echoes the shared mode prop.
+    expect(screen.getByTestId('directions-panel')).toHaveTextContent(
+      'mode:transit',
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '내기준정렬' }));
+
+    // getRoute is called with the shared transit mode.
+    await waitFor(() => expect(getRoute).toHaveBeenCalled());
+    expect(getRoute).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ mode: 'transit' }),
+    );
+    // Captions reflect 대중교통.
+    await waitFor(() =>
+      expect(screen.getAllByTestId('spot-distance')[0]).toHaveTextContent(
+        '대중교통 기준',
+      ),
+    );
+  });
+
+  it('shows a Korean error and does NOT reorder when no location is available', async () => {
+    getMyRole.mockResolvedValue('member');
+    withGeo(null); // tracking off, no current position
+    // One-shot geolocation also fails (permission denied).
+    const getCurrentPosition = vi.fn(
+      (_ok: PositionCallback, err?: PositionErrorCallback) => {
+        err?.({ code: 1, message: 'denied' } as GeolocationPositionError);
+      },
+    );
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      geolocation: { getCurrentPosition } as unknown as Geolocation,
+    });
+
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+
+    await userEvent.click(screen.getByRole('button', { name: '내기준정렬' }));
+
+    expect(
+      await screen.findByText(/현재 위치를 가져올 수 없습니다/),
+    ).toBeInTheDocument();
+    // No distance captions -> not sorted.
+    expect(screen.queryByTestId('spot-distance')).not.toBeInTheDocument();
+    expect(getRoute).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('falls back to a one-shot geolocation fix when tracking is off', async () => {
+    getMyRole.mockResolvedValue('member');
+    withGeo(null); // no live position
+    const getCurrentPosition = vi.fn((ok: PositionCallback) => {
+      ok({
+        coords: { latitude: 37.49, longitude: 127.01 },
+      } as GeolocationPosition);
+    });
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      geolocation: { getCurrentPosition } as unknown as Geolocation,
+    });
+
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+
+    await userEvent.click(screen.getByRole('button', { name: '내기준정렬' }));
+
+    await waitFor(() => expect(getRoute).toHaveBeenCalledTimes(2));
+    // The one-shot fix was used as the origin.
+    expect(getRoute.mock.calls[0][0]).toEqual({ lat: 37.49, lng: 127.01 });
+    vi.unstubAllGlobals();
   });
 });

@@ -193,6 +193,77 @@ describe('DirectionsPanel travel-mode toggle (도보/대중교통/차)', () => {
   });
 });
 
+describe('DirectionsPanel controlled mode (shared with 내기준정렬)', () => {
+  // When mode + onModeChange are provided, the panel is controlled: the pressed
+  // tab reflects the prop, and clicking a tab calls onModeChange (so the parent
+  // can share the selected mode with the 내기준정렬 button).
+  it('reflects the controlled mode prop in the pressed tab', () => {
+    render(
+      <DirectionsPanel
+        spots={spots}
+        stampedSpotIds={new Set()}
+        currentLocation={null}
+        onRoute={vi.fn()}
+        mode="transit"
+        onModeChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: '대중교통' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: '차' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('calls onModeChange when a tab is clicked (controlled)', async () => {
+    const onModeChange = vi.fn();
+    render(
+      <DirectionsPanel
+        spots={spots}
+        stampedSpotIds={new Set()}
+        currentLocation={null}
+        onRoute={vi.fn()}
+        mode="car"
+        onModeChange={onModeChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '도보' }));
+    expect(onModeChange).toHaveBeenCalledWith('walk');
+  });
+
+  it('routes with the controlled mode prop', async () => {
+    getRoute.mockResolvedValue({
+      mode: 'walk',
+      path: [
+        { lat: 37.5, lng: 127.0 },
+        { lat: 37.51, lng: 126.92 },
+      ],
+      distanceM: 900,
+      durationSec: 720,
+      fallback: false,
+    });
+    render(
+      <DirectionsPanel
+        spots={spots}
+        stampedSpotIds={new Set()}
+        currentLocation={null}
+        onRoute={vi.fn()}
+        mode="walk"
+        onModeChange={vi.fn()}
+      />,
+    );
+    await routeBetween('s1', 's2');
+    expect(getRoute).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ mode: 'walk' }),
+    );
+  });
+});
+
 describe('DirectionsPanel guide-to-next (REQ-F2-003 / AC-F2-02)', () => {
   it('routes from current location to the next unvisited spot in order', async () => {
     const current = { lat: 37.49, lng: 127.01 };
