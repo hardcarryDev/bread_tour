@@ -80,7 +80,7 @@ describe('InviteAccept (REQ-F6-003 / AC-F6-03)', () => {
     );
     expect(
       await screen.findByText(
-        '초대를 처리할 수 없습니다. 링크가 만료되었거나 유효하지 않습니다.',
+        '유효하지 않은 초대 링크입니다. 초대한 사람에게 링크를 다시 받아 주세요.',
       ),
     ).toBeInTheDocument();
     expect(
