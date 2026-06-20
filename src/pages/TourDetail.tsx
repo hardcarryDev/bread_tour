@@ -11,6 +11,7 @@ import {
 import { useSpots } from '../features/map/useSpots';
 import { useSpotKinds } from '../features/map/useSpotKinds';
 import SpotList from '../features/map/SpotList';
+import SpotReorder from '../features/map/SpotReorder';
 import SpotForm, { type SpotFormValues } from '../features/map/SpotForm';
 import {
   addSpot,
@@ -76,6 +77,8 @@ export default function TourDetail() {
   const { kinds: spotKinds, addKind: addSpotKindOption } = useSpotKinds(tourId);
   const [showSpotForm, setShowSpotForm] = useState(false);
   const [editingSpot, setEditingSpot] = useState<Spot | null>(null);
+  // "순서" mode: multi-select + drag-and-drop reorder applied on 확인.
+  const [reorderMode, setReorderMode] = useState(false);
   // Real road route to overlay on the map (REQ-F2-001). Set from DirectionsPanel's
   // onRoute callback so the actual Kakao road polyline is drawn, not just the
   // straight spot-order connector. undefined => no route currently shown.
@@ -493,13 +496,28 @@ export default function TourDetail() {
         <div className="section-head">
           <h2>장소</h2>
           <div className="spots-panel-actions">
+            {/* "순서": enter multi-select + drag-and-drop reorder mode (AC-F5-06).
+                Needs at least two spots to be meaningful. */}
+            <button
+              type="button"
+              data-testid="reorder-mode"
+              onClick={() => {
+                setSortMode(null);
+                setShowSpotForm(false);
+                setEditingSpot(null);
+                setReorderMode(true);
+              }}
+              disabled={reorderMode || spots.length < 2}
+            >
+              순서
+            </button>
             {/* "내기준정렬" (Feature): personal distance sort, to the LEFT of
                 "장소 추가". Uses the currently selected travel mode and the
                 user's current location; LOCAL VIEW ONLY (never persisted). */}
             <button
               type="button"
               onClick={() => void handleSortByMyDistance()}
-              disabled={sorting}
+              disabled={sorting || reorderMode}
             >
               {sorting ? '정렬 중…' : '내기준정렬'}
             </button>
@@ -510,6 +528,7 @@ export default function TourDetail() {
                 setEditingSpot(null);
                 setShowSpotForm((v) => !v);
               }}
+              disabled={reorderMode}
             >
               장소 추가
             </button>
@@ -544,6 +563,15 @@ export default function TourDetail() {
           <p className="muted" role="status">
             장소 불러오는 중...
           </p>
+        ) : reorderMode ? (
+          <SpotReorder
+            spots={spots}
+            onApply={(orderedIds) => {
+              setReorderMode(false);
+              void handleReorder(orderedIds);
+            }}
+            onCancel={() => setReorderMode(false)}
+          />
         ) : (
           <SpotList
             spots={spots}

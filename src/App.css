@@ -508,6 +508,79 @@ button.danger {
   min-height: 2.25rem; /* touch target (NFR-RESP-002) */
 }
 
+/* "순서" reorder mode: selectable rows + drag handle + drop indicator. */
+.spot-reorder-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0;
+}
+
+.spot-reorder-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.spot-reorder-item {
+  /* The handle owns the drag gesture; keep row text from being selected when
+     a drag starts on touch. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.spot-reorder-item.is-dragging {
+  opacity: 0.5;
+}
+
+/* Insertion indicator: a colored line at the top of the row the block drops
+   before (or a trailing element for end-of-list). */
+.spot-reorder-item.drop-before {
+  box-shadow: inset 0 3px 0 0 #b5651d;
+}
+
+.spot-reorder-drop-end {
+  list-style: none;
+  height: 3px;
+  background: #b5651d;
+  border-radius: 2px;
+}
+
+/* Round selection toggle (the "o" on the left). */
+.spot-reorder-check {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: 2px solid #b5651d;
+  background: #fff;
+  cursor: pointer;
+}
+
+.spot-reorder-check.checked {
+  background: #b5651d;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+
+/* Drag handle: large touch target; disable native touch scrolling on it so a
+   drag gesture isn't stolen by the page scroll (touch DnD). */
+.spot-reorder-handle {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  background: none;
+  color: #6b4a1f;
+  border: 1px solid #e0d5c5;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
 .spot-form {
   display: flex;
   flex-direction: column;
