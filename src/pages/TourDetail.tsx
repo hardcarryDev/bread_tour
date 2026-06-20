@@ -148,9 +148,10 @@ export default function TourDetail() {
   // 'straight' (직선) mode which the shared TravelMode does not include, so it
   // uses a LOCAL union — `travelMode`/DirectionsPanel stay TravelMode.
   const [routeLegs, setRouteLegs] = useState<LatLng[][] | undefined>(undefined);
-  const [routeModeShown, setRouteModeShown] = useState<RouteOverlayMode | null>(
-    null,
-  );
+  // 직선 is the default: the straight visit-order connector is always drawn, so
+  // the 직선 icon reads as selected on load (車/도보 switch to a road overlay).
+  const [routeModeShown, setRouteModeShown] =
+    useState<RouteOverlayMode>('straight');
   const [routeBusy, setRouteBusy] = useState<RouteOverlayMode | null>(null);
 
   // Selected travel mode, lifted from DirectionsPanel so BOTH the directions
@@ -404,30 +405,22 @@ export default function TourDetail() {
     }
   }
 
-  // Show the whole-tour route for an overlay mode (직선/차/도보), drawing each
-  // visit-order segment in its own color. Clicking the mode that is already
-  // shown toggles it off. For 직선 (straight) we build the connectors locally
-  // with no routing call (instant). For 차/도보 we fetch the real road path;
-  // getPathRoute never throws (each leg degrades to a straight segment), so the
-  // map stays usable even if routing fails.
+  // Show the whole-tour route for an overlay mode (직선/차/도보). 직선 is the base
+  // state: the straight visit-order connector is the map's always-on order
+  // connector (MapView showOrderConnector), so it draws no routeLegs and never
+  // toggles "off" — selecting 직선 just clears any road overlay. 차/도보 fetch the
+  // real road path; getPathRoute never throws (each leg degrades to a straight
+  // segment), so the map stays usable even if routing fails. Clicking the road
+  // mode already shown returns to 직선 rather than a no-selection state.
   async function showRouteForMode(mode: RouteOverlayMode) {
-    if (routeModeShown === mode) {
-      setRouteModeShown(null);
-      setRouteLegs(undefined);
-      return;
-    }
-    const ordered = [...spots].sort((a, b) => a.order_index - b.order_index);
-    if (ordered.length < 2) return;
-
-    // 직선: the straight connector is the map's always-on order connector
-    // (MapView showOrderConnector), so we draw no routeLegs here — doing so
-    // would double up the straight line. Just mark the mode as shown.
-    if (mode === 'straight') {
+    if (mode === 'straight' || routeModeShown === mode) {
       setActionError(null);
       setRouteLegs(undefined);
       setRouteModeShown('straight');
       return;
     }
+    const ordered = [...spots].sort((a, b) => a.order_index - b.order_index);
+    if (ordered.length < 2) return;
 
     // 차/도보: real road path. mode is 'car' | 'walk' here, both ⊂ TravelMode.
     setRouteBusy(mode);

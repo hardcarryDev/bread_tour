@@ -1001,7 +1001,7 @@ describe('TourDetail "내기준정렬" local distance sort (Feature)', () => {
   // "전체 경로 보기" overlay control (right of the map): offers 직선/차/도보 only
   // (NO 대중교통 — that stays on the separate DirectionsPanel). 직선 draws the
   // straight visit-order connectors with no routing call.
-  it('renders 직선/차/도보 route-mode buttons (no 대중교통) and 직선 toggles on', async () => {
+  it('renders 직선/차/도보 route-mode buttons (no 대중교통) with 직선 selected by default', async () => {
     renderDetail();
     await screen.findByTestId('spots-panel');
 
@@ -1010,9 +1010,14 @@ describe('TourDetail "내기준정렬" local distance sort (Feature)', () => {
     expect(screen.getByTestId('route-mode-walk')).toBeInTheDocument();
     expect(screen.queryByTestId('route-mode-transit')).not.toBeInTheDocument();
 
-    const straight = screen.getByTestId('route-mode-straight');
-    expect(straight).toHaveAttribute('aria-pressed', 'false');
-    await userEvent.click(straight);
-    expect(straight).toHaveAttribute('aria-pressed', 'true');
+    // 직선 is the default selection, matching the always-on straight connector.
+    expect(screen.getByTestId('route-mode-straight')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByTestId('route-mode-car')).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 });
