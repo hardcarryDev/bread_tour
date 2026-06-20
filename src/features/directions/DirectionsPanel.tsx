@@ -145,25 +145,6 @@ export default function DirectionsPanel({
 
   return (
     <div className="directions-panel" aria-label="길찾기">
-      {/* Travel-mode tabs (도보 / 대중교통 / 차), like the KakaoMap app. */}
-      <div
-        className="mode-tabs"
-        role="group"
-        aria-label="이동 수단 선택"
-      >
-        {MODE_TABS.map((tab) => (
-          <button
-            key={tab.mode}
-            type="button"
-            className="mode-tab"
-            aria-pressed={mode === tab.mode}
-            onClick={() => setMode(tab.mode)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {/* From / To selects stacked in one block, with 길찾기 alongside them. */}
       <div className="directions-controls">
         <div className="directions-fields">
@@ -206,6 +187,21 @@ export default function DirectionsPanel({
         >
           길찾기
         </button>
+      </div>
+
+      {/* Travel-mode tabs (도보 / 대중교통 / 차), placed below 길찾기. */}
+      <div className="mode-tabs" role="group" aria-label="이동 수단 선택">
+        {MODE_TABS.map((tab) => (
+          <button
+            key={tab.mode}
+            type="button"
+            className="mode-tab"
+            aria-pressed={mode === tab.mode}
+            onClick={() => setMode(tab.mode)}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {error && (
