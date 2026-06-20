@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Spot } from '../../types/database';
 import type { SpotMenuWithAuthor } from '../menu/api';
 import {
@@ -22,6 +23,11 @@ interface SpotListProps {
   // Owner-only delete (REQ-F6-007). Absent / non-owner => no delete controls.
   onDelete?: (spotId: string) => void;
   onEdit?: (spot: Spot) => void;
+  // Inline edit: the id of the spot currently being edited, and a render function
+  // that returns the editor UI. When a row matches, its content is replaced by
+  // the editor so editing happens IN the row (not in a separate form above).
+  editingSpotId?: string;
+  renderEditor?: (spot: Spot) => ReactNode;
   // "내기준정렬" local view sort. When set, the list is displayed in ascending
   // distance order (closest first) and each row shows a green caption with this
   // mode's label + distance + time. This is a PERSONAL view sort only — it never
@@ -58,6 +64,8 @@ export default function SpotList({
   onReorder,
   onDelete,
   onEdit,
+  editingSpotId,
+  renderEditor,
   sortMode,
   distanceBySpot,
   menusBySpot = {},
@@ -101,6 +109,23 @@ export default function SpotList({
         // the move()/disabled logic (independent of the displayed order).
         const planIndex = planOrdered.findIndex((s) => s.id === spot.id);
         const dist = sortMode ? distanceBySpot?.[spot.id] : undefined;
+
+        // Inline edit: replace this row's content with the editor (the edit form
+        // appears IN the clicked row, not in a separate panel above the list).
+        if (renderEditor && spot.id === editingSpotId) {
+          return (
+            <li
+              key={spot.id}
+              className="spot-list-item spot-list-item-editing"
+              data-testid="spot-row-editor"
+            >
+              <span className="spot-order" aria-hidden="true">
+                {index + 1}
+              </span>
+              {renderEditor(spot)}
+            </li>
+          );
+        }
         return (
           <li key={spot.id} className="spot-list-item">
             <span className="spot-order" aria-hidden="true">

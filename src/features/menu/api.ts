@@ -74,3 +74,14 @@ export async function addSpotMenu(params: {
   if (error) throw new Error(error.message);
   return data as SpotMenu;
 }
+
+// Delete a recommended menu by id (REQ-F4). RLS (spot_menus_delete) allows the
+// menu's author or the tour owner to delete; a non-permitted attempt surfaces as
+// an error here rather than silently succeeding.
+export async function deleteSpotMenu(menuId: string): Promise<void> {
+  const { error } = await supabase
+    .from('spot_menus')
+    .delete()
+    .eq('id', menuId);
+  if (error) throw new Error(error.message);
+}

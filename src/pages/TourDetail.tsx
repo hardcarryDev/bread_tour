@@ -19,7 +19,7 @@ import {
   reorderSpots,
   updateSpot,
 } from '../features/map/api';
-import { addSpotMenu } from '../features/menu/api';
+import { addSpotMenu, deleteSpotMenu } from '../features/menu/api';
 import { useStamps } from '../features/stamp/useStamps';
 import { usePendingCheckIns } from '../features/stamp/usePendingCheckIns';
 import { useGeoStamp } from '../features/stamp/useGeoStamp';
@@ -345,6 +345,31 @@ export default function TourDetail() {
     }
   }
 
+  // Add a signature menu to a spot from the inline editor (REQ-F4-001), then
+  // refresh so the editor's menu list reflects it immediately.
+  async function handleAddMenuToSpot(spotId: string, menuText: string) {
+    if (!user) return;
+    setActionError(null);
+    try {
+      await addSpotMenu({ spotId, authorId: user.id, menuText });
+      reloadSpots();
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
+  }
+
+  // Delete a signature menu from the inline editor (REQ-F4). RLS allows the
+  // author or the tour owner; a denied attempt surfaces as an error.
+  async function handleDeleteMenu(menuId: string) {
+    setActionError(null);
+    try {
+      await deleteSpotMenu(menuId);
+      reloadSpots();
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
+  }
+
   // Resolve the user's current location for the local sort. Prefer the live
   // in-memory GPS fix (NFR-GEO-006: never persisted); if tracking is off, take a
   // ONE-SHOT navigator.geolocation fix (also in-memory only — never stored).
@@ -544,21 +569,6 @@ export default function TourDetail() {
           />
         )}
 
-        {editingSpot && (
-          <SpotForm
-            initial={{
-              name: editingSpot.name,
-              lat: editingSpot.lat,
-              lng: editingSpot.lng,
-              kind: editingSpot.kind,
-            }}
-            kinds={spotKinds}
-            onAddKind={addSpotKindOption}
-            onSubmit={handleEditSpot}
-            onCancel={() => setEditingSpot(null)}
-          />
-        )}
-
         {spotsLoading ? (
           <p className="muted" role="status">
             장소 불러오는 중...
@@ -582,6 +592,28 @@ export default function TourDetail() {
               setShowSpotForm(false);
               setEditingSpot(s);
             }}
+            // Inline edit: the editor renders inside the clicked row (not above
+            // the list). It includes signature-menu add/delete (REQ-F4).
+            editingSpotId={editingSpot?.id}
+            renderEditor={(s) => (
+              <SpotForm
+                initial={{
+                  name: s.name,
+                  lat: s.lat,
+                  lng: s.lng,
+                  kind: s.kind,
+                }}
+                kinds={spotKinds}
+                onAddKind={addSpotKindOption}
+                menus={menusBySpot[s.id] ?? []}
+                onAddMenu={(text) => handleAddMenuToSpot(s.id, text)}
+                onDeleteMenu={handleDeleteMenu}
+                currentUserId={user?.id}
+                isOwner={isOwner}
+                onSubmit={handleEditSpot}
+                onCancel={() => setEditingSpot(null)}
+              />
+            )}
             // Personal distance sort (Feature): display by distance + show the
             // green captions. order_index / shared plan order is untouched.
             sortMode={sortMode}

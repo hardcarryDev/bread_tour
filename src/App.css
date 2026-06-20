@@ -266,6 +266,59 @@ button.danger {
   padding: 1rem;
 }
 
+/* Inline spot editor: the edit form replaces the row content in place, so it
+   lays out as a block (not the row's flex) and reads as part of that row. */
+.spot-list-item-editing {
+  display: block;
+  border: 1px solid #d8c6a8;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: #fbf6ee;
+}
+
+/* Signature-menu manager inside the edit form (add/delete inline, REQ-F4). */
+.spot-form-menus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.spot-form-menus .label-text {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.spot-form-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.spot-form-menu-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.spot-form-add-menu {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.spot-form-add-menu input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.spot-form-add-menu button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .danger-zone {
   margin-top: 1rem;
 }

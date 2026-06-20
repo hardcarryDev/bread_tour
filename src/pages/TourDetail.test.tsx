@@ -37,6 +37,7 @@ const updateSpot = vi.fn();
 const deleteSpot = vi.fn();
 const reorderSpots = vi.fn();
 const addSpotMenu = vi.fn();
+const deleteSpotMenu = vi.fn();
 
 vi.mock('../features/map/api', () => ({
   addSpot: (...a: unknown[]) => addSpot(...a),
@@ -47,6 +48,7 @@ vi.mock('../features/map/api', () => ({
 
 vi.mock('../features/menu/api', () => ({
   addSpotMenu: (...a: unknown[]) => addSpotMenu(...a),
+  deleteSpotMenu: (...a: unknown[]) => deleteSpotMenu(...a),
 }));
 
 // SpotForm now opens the interactive LocationPicker (Kakao map) to choose a
@@ -545,6 +547,42 @@ describe('TourDetail Slice B spot management (REQ-F1-001, F3, F4, F5-007)', () =
     await userEvent.click(screen.getByRole('button', { name: /저장/ }));
     await waitFor(() => expect(addSpot).toHaveBeenCalledTimes(1));
     expect(addSpotMenu).not.toHaveBeenCalled();
+  });
+
+  it('edits a spot inline in its row, with signature-menu add + delete (REQ-F4)', async () => {
+    getMyRole.mockResolvedValue('owner');
+    addSpotMenu.mockResolvedValue({ id: 'mnX' });
+    deleteSpotMenu.mockResolvedValue(undefined);
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+
+    // Open edit on 성수 베이커리 (s1).
+    await userEvent.click(
+      screen.getByRole('button', { name: '장소 편집: 성수 베이커리' }),
+    );
+
+    // The editor renders IN the row (not a separate form above the list).
+    const editor = await screen.findByTestId('spot-row-editor');
+    expect(within(editor).getByDisplayValue('성수 베이커리')).toBeInTheDocument();
+    // The existing signature menu is listed inside the editor.
+    expect(within(editor).getByTestId('menu-manager')).toHaveTextContent('소금빵');
+
+    // Add a new signature menu -> registers immediately for this spot.
+    await userEvent.type(within(editor).getByTestId('add-menu-input'), '단팥빵');
+    await userEvent.click(within(editor).getByTestId('add-menu'));
+    await waitFor(() =>
+      expect(addSpotMenu).toHaveBeenCalledWith({
+        spotId: 's1',
+        authorId: 'u1',
+        menuText: '단팥빵',
+      }),
+    );
+
+    // Delete the existing menu -> deleteSpotMenu(menuId).
+    await userEvent.click(
+      within(editor).getByRole('button', { name: '메뉴 삭제: 소금빵' }),
+    );
+    await waitFor(() => expect(deleteSpotMenu).toHaveBeenCalledWith('mn1'));
   });
 
   it('reorder via the spot list calls reorder_spots RPC (AC-F5-06)', async () => {

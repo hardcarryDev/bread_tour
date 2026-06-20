@@ -7,6 +7,7 @@ vi.mock('../../lib/supabase', () => {
 import { supabase } from '../../lib/supabase';
 import {
   addSpotMenu,
+  deleteSpotMenu,
   listSpotMenus,
   listSpotMenusForTour,
 } from './api';
@@ -144,5 +145,22 @@ describe('addSpotMenu (REQ-F4-001 / AC-F4-01)', () => {
     ).rejects.toThrow(/empty/i);
     // No insert should be attempted for a blank menu.
     expect(mockedFrom).not.toHaveBeenCalled();
+  });
+});
+
+describe('deleteSpotMenu (REQ-F4)', () => {
+  it('deletes the menu row by id', async () => {
+    const b = builder({ data: null, error: null });
+    mockedFrom.mockReturnValue(b);
+    await deleteSpotMenu('m1');
+    expect(mockedFrom).toHaveBeenCalledWith('spot_menus');
+    expect(b.delete).toHaveBeenCalled();
+    expect(b.eq).toHaveBeenCalledWith('id', 'm1');
+  });
+
+  it('throws when the delete is rejected (RLS: not author/owner)', async () => {
+    const b = builder({ data: null, error: { message: 'denied' } });
+    mockedFrom.mockReturnValue(b);
+    await expect(deleteSpotMenu('m1')).rejects.toThrow('denied');
   });
 });
