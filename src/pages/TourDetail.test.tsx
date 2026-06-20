@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -340,16 +340,22 @@ describe('TourDetail permission UI (REQ-F6-004/005/006 / AC-F6-04..06)', () => {
     renderDetail();
 
     expect(await screen.findByText('Seoul Bakeries')).toBeInTheDocument();
-    // Owner sees delete-tour and member-remove controls.
+    // Owner sees delete-tour and invite controls.
     expect(
       screen.getByRole('button', { name: '투어 삭제' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: '멤버 초대' }),
     ).toBeInTheDocument();
+    // Removal is a long-press affordance now (not an always-visible button);
+    // the owner gets the hint and a right-click opens the remove confirm.
     expect(
-      screen.getAllByRole('button', { name: '멤버 내보내기' }).length,
-    ).toBeGreaterThan(0);
+      screen.getByText(/이름을 길게 누르면/),
+    ).toBeInTheDocument();
+    fireEvent.contextMenu(screen.getByText('빵순이'));
+    expect(
+      screen.getByRole('button', { name: '내보내기' }),
+    ).toBeInTheDocument();
   });
 
   it('hides owner-only actions from a regular member (AC-F6-06)', async () => {
@@ -357,12 +363,18 @@ describe('TourDetail permission UI (REQ-F6-004/005/006 / AC-F6-04..06)', () => {
     renderDetail();
 
     expect(await screen.findByText('Seoul Bakeries')).toBeInTheDocument();
-    // Member must NOT see delete-tour or remove-member controls.
+    // Member must NOT see delete-tour, invite, or any removal affordance.
     expect(
       screen.queryByRole('button', { name: '투어 삭제' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: '멤버 내보내기' }),
+      screen.queryByRole('button', { name: '멤버 초대' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/이름을 길게 누르면/)).not.toBeInTheDocument();
+    // A right-click on a member name opens no remove confirm for a non-owner.
+    fireEvent.contextMenu(screen.getByText('빵순이'));
+    expect(
+      screen.queryByRole('button', { name: '내보내기' }),
     ).not.toBeInTheDocument();
   });
 
@@ -387,13 +399,16 @@ describe('TourDetail permission UI (REQ-F6-004/005/006 / AC-F6-04..06)', () => {
     expect(await screen.findByText('Tour List')).toBeInTheDocument();
   });
 
-  it('owner can remove a member, then the list reloads (AC-F6-04)', async () => {
+  it('owner removes a member via long-press confirm, then the list reloads (AC-F6-04)', async () => {
     getMyRole.mockResolvedValue('owner');
     removeMember.mockResolvedValue(undefined);
     renderDetail();
     await screen.findByText('Seoul Bakeries');
+    // Long-press is exercised in MemberRoster's own suite; here we open the
+    // confirm via the desktop right-click shortcut, then confirm removal.
+    fireEvent.contextMenu(screen.getByText('빵순이')); // u2 / membership m2
     await userEvent.click(
-      screen.getByRole('button', { name: '멤버 내보내기' }),
+      screen.getByRole('button', { name: '내보내기' }),
     );
     await waitFor(() => expect(removeMember).toHaveBeenCalledWith('m2'));
     // listMembers called once on load + once on reload.
@@ -566,7 +581,7 @@ describe('TourDetail Slice D realtime collaboration (REQ-F5-002/003/004/005)', (
     expect(typeof arg.reloadMembers).toBe('function');
   });
 
-  it('renders the connected-members indicator from presence (AC-F5-03)', async () => {
+  it('marks members present on the channel as online in the roster (AC-F5-03)', async () => {
     getMyRole.mockResolvedValue('member');
     useRealtimeTour.mockReturnValue({
       connectedMembers: [
@@ -580,8 +595,8 @@ describe('TourDetail Slice D realtime collaboration (REQ-F5-002/003/004/005)', (
     });
     renderDetail();
     await screen.findByTestId('spots-panel');
-    expect(screen.getByLabelText('접속 중인 멤버')).toBeInTheDocument();
-    expect(screen.getByTestId('connected-count')).toHaveTextContent('2');
+    // Both members (u1, u2) are present -> online count of 2.
+    expect(screen.getByTestId('online-count')).toHaveTextContent('2');
   });
 
   it('shows the offline indicator when the channel is disconnected (AC-F5-05)', async () => {

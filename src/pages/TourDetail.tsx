@@ -39,11 +39,10 @@ import {
   spotConflictValue,
   useRealtimeTour,
 } from '../features/collab/useRealtimeTour';
-import ConnectedMembers from '../features/collab/ConnectedMembers';
+import MemberRoster from '../features/collab/MemberRoster';
 import OfflineIndicator from '../features/collab/OfflineIndicator';
 import ToastHost from '../features/collab/ToastHost';
 import { useProfiles } from '../features/profile/useProfiles';
-import { displayNameFor } from '../features/profile/api';
 import AppNav from '../features/profile/AppNav';
 import type { Spot } from '../types/database';
 import { errorMessage } from '../lib/errors';
@@ -457,8 +456,6 @@ export default function TourDetail() {
 
       <div className="collab-bar">
         <p className="role-badge">{isOwner ? '소유자' : '멤버'}</p>
-        {/* Live presence (REQ-F5-003) + offline state (REQ-F5-005). */}
-        <ConnectedMembers members={connectedMembers} />
       </div>
 
       <OfflineIndicator online={online} />
@@ -469,42 +466,19 @@ export default function TourDetail() {
         </p>
       )}
 
-      <section className="members">
-        <div className="section-head">
-          <h2>멤버</h2>
-          {isOwner && (
-            <button type="button" onClick={handleInvite}>
-              멤버 초대
-            </button>
-          )}
-        </div>
-
-        {inviteLink && (
-          <p className="invite-link" data-testid="invite-link">
-            초대 링크: <code>{inviteLink}</code>
-          </p>
-        )}
-
-        <ul className="member-list" data-testid="member-list">
-          {members.map((m) => (
-            <li key={m.id}>
-              {/* Show the member's display name, not the raw UUID (Feature 1). */}
-              <span>{displayNameFor(m.user_id, profileNames)}</span>
-              <span className="muted"> ({m.role})</span>
-              {/* Owner may remove non-owner members only (AC-F6-04/06). */}
-              {isOwner && m.role !== 'owner' && (
-                <button
-                  type="button"
-                  className="link-button"
-                  onClick={() => handleRemoveMember(m.id)}
-                >
-                  멤버 내보내기
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* Single member roster (F5/F6): all members with an "접속 중" dot for
+          those present on the realtime channel. The owner long-presses a name
+          (touch/mouse hold or right-click) to remove a member; the invite
+          control lives here too (owner only, AC-F6-02/04/06). */}
+      <MemberRoster
+        members={members}
+        profileNames={profileNames}
+        onlineIds={new Set(connectedMembers.map((m) => m.user_id))}
+        isOwner={isOwner}
+        inviteLink={inviteLink}
+        onInvite={handleInvite}
+        onRemoveMember={handleRemoveMember}
+      />
 
       {/* Slice B: spots list + Kakao map + add/edit/reorder. Stamps (Slice C)
           and realtime (Slice D) plug into MapView / useSpots via props. */}
