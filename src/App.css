@@ -49,13 +49,21 @@ label {
   font-size: 0.9rem;
 }
 
-input {
+input,
+select {
   padding: 0.65rem 0.75rem;
   font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 0.5rem;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Touch-friendly hit target for dropdowns (NFR-RESP-002): min 44px tall, like
+   buttons/inputs. The native select was too short to tap comfortably. */
+select {
+  min-height: 44px;
+  background: #fff;
 }
 
 /* Touch-friendly hit targets (NFR-RESP-002): min 44px tall. */
