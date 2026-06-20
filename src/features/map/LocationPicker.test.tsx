@@ -229,6 +229,15 @@ describe('LocationPicker keyword search (A8 place search)', () => {
     expect(content).toContain('상세보기');
   });
 
+  it('hints the mobile keyboard to show a 검색/Search action (not 다음/Next)', () => {
+    render(<LocationPicker onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    const input = screen.getByTestId('picker-search-input');
+    // enterKeyHint=search makes the soft keyboard show a Search action that
+    // fires Enter; type=search reinforces a search-oriented keyboard.
+    expect(input).toHaveAttribute('enterkeyhint', 'search');
+    expect(input).toHaveAttribute('type', 'search');
+  });
+
   it('shows a no-results message when the search returns nothing', async () => {
     searchResults = [];
     searchStatus = 'ZERO_RESULT';

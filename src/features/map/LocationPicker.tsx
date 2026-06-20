@@ -202,13 +202,20 @@ export default function LocationPicker({
       <div className="location-picker">
         <div className="location-picker-search">
           <input
-            type="text"
+            type="search"
             data-testid="picker-search-input"
+            // Show a "검색"/Search action on the mobile keyboard instead of the
+            // default "다음"/Next: the input sits inside SpotForm's <form> with
+            // later fields, so mobile browsers offer a focus-advancing "Next"
+            // key that never fires Enter (web Enter works, mobile "다음" did not).
+            // The Search action fires Enter, which onKeyDown turns into a search.
+            enterKeyHint="search"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => {
-              // Enter searches in place; preventDefault stops the surrounding
-              // SpotForm <form> from submitting (which would close the picker).
+              // Enter (web) / the mobile "검색" action searches in place;
+              // preventDefault stops the surrounding SpotForm <form> from
+              // submitting (which would close the picker).
               if (e.key === 'Enter') {
                 e.preventDefault();
                 runSearch();
