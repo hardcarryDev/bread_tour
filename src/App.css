@@ -528,6 +528,46 @@ button.danger {
   background: #fef3c7;
 }
 
+/* Marker info bubble (Kakao InfoWindow content). Mirrors the place-detail
+   popup on map.kakao.com: name + category + address + phone + detail link. */
+.picker-iw {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0.75rem;
+  min-width: 180px;
+  max-width: 240px;
+  color: #222;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.picker-iw-name {
+  font-size: 0.95rem;
+  color: #222;
+}
+
+.picker-iw-cat {
+  color: #6b7280;
+  font-size: 0.78rem;
+}
+
+.picker-iw-addr,
+.picker-iw-tel {
+  color: #444;
+}
+
+.picker-iw-link {
+  margin-top: 0.25rem;
+  color: #b5651d;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.picker-iw-link:hover {
+  text-decoration: underline;
+}
+
 .location-picker-canvas {
   flex: 1;
   min-height: 320px;

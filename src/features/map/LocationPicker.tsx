@@ -20,6 +20,46 @@ interface SearchResult {
   name: string;
   lat: number;
   lng: number;
+  // Extra place info shown in the marker info bubble (A8). Rating/reviews are
+  // NOT exposed by the Places API, so `placeUrl` deep-links into the full Kakao
+  // place page where those live.
+  category?: string;
+  address?: string;
+  phone?: string;
+  placeUrl?: string;
+}
+
+// Escape user-visible Kakao strings before injecting into the InfoWindow's HTML
+// content (place names can contain &, <, > and would otherwise break markup).
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Build the marker info bubble: name + category + address + phone + a link into
+// the full Kakao place page (which carries rating/reviews/photos).
+function buildInfoContent(place: SearchResult): string {
+  const rows: string[] = [
+    `<strong class="picker-iw-name">${escapeHtml(place.name)}</strong>`,
+  ];
+  if (place.category) {
+    rows.push(`<span class="picker-iw-cat">${escapeHtml(place.category)}</span>`);
+  }
+  if (place.address) {
+    rows.push(`<span class="picker-iw-addr">${escapeHtml(place.address)}</span>`);
+  }
+  if (place.phone) {
+    rows.push(`<span class="picker-iw-tel">${escapeHtml(place.phone)}</span>`);
+  }
+  if (place.placeUrl) {
+    rows.push(
+      `<a class="picker-iw-link" href="${escapeHtml(place.placeUrl)}" target="_blank" rel="noopener noreferrer">상세보기 (평점·리뷰)</a>`,
+    );
+  }
+  return `<div class="picker-iw">${rows.join('')}</div>`;
 }
 
 // Default map centre when no initial coordinate is supplied. Daejeon city —
@@ -40,6 +80,7 @@ export default function LocationPicker({
   const mapRef = useRef<KakaoMap | null>(null);
   const kakaoRef = useRef<KakaoNamespace | null>(null);
   const markerRef = useRef<KakaoMarker | null>(null);
+  const infoWindowRef = useRef<KakaoInfoWindow | null>(null);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -77,13 +118,16 @@ export default function LocationPicker({
       });
     return () => {
       active = false;
+      infoWindowRef.current?.close();
     };
     // The map is created once on mount; subsequent state changes drive markers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Drop or move the single draggable marker and record the coordinate.
-  function placePin(lat: number, lng: number, name?: string) {
+  // Drop or move the single draggable marker and record the coordinate. When a
+  // search result `place` is supplied, open an info bubble on the marker; a raw
+  // map click has no place data, so any stale bubble is closed instead.
+  function placePin(lat: number, lng: number, place?: SearchResult) {
     const kakao = kakaoRef.current;
     const map = mapRef.current;
     if (!kakao || !map) return;
@@ -97,7 +141,17 @@ export default function LocationPicker({
       markerRef.current = marker;
     }
     map.setCenter(pos);
-    setCoord({ lat, lng, name });
+    setCoord({ lat, lng, name: place?.name });
+
+    infoWindowRef.current?.close();
+    if (place) {
+      const infoWindow =
+        infoWindowRef.current ??
+        new kakao.maps.InfoWindow({ removable: true, zIndex: 1 });
+      infoWindow.setContent(buildInfoContent(place));
+      infoWindow.open(map, markerRef.current ?? undefined);
+      infoWindowRef.current = infoWindow;
+    }
   }
 
   // Kakao Places keyword search: type a name -> list results -> pick one (A8).
@@ -123,13 +177,17 @@ export default function LocationPicker({
           name: p.place_name,
           lat: Number(p.y),
           lng: Number(p.x),
+          category: p.category_name,
+          address: p.road_address_name || p.address_name,
+          phone: p.phone,
+          placeUrl: p.place_url,
         })),
       );
     });
   }
 
   function selectResult(r: SearchResult) {
-    placePin(r.lat, r.lng, r.name);
+    placePin(r.lat, r.lng, r);
     setResults([]);
     setSearched(false);
   }

@@ -39,6 +39,15 @@ declare global {
     setMap(map: KakaoMap | null): void;
   }
 
+  // Info bubble anchored to a marker. The location picker opens one on the
+  // selected search result to show place name/category/address/phone plus a
+  // "상세보기" link into the full Kakao place page (A8 info bubble).
+  interface KakaoInfoWindow {
+    open(map: KakaoMap, marker?: KakaoMarker): void;
+    close(): void;
+    setContent(content: string | HTMLElement): void;
+  }
+
   // Constructor / setOptions shape for a Circle overlay. `radius` is in metres.
   interface KakaoCircleOptions {
     center: KakaoLatLng;
@@ -111,6 +120,12 @@ declare global {
     y: string; // latitude
     address_name?: string;
     road_address_name?: string;
+    // Extra fields the Places keyword search returns. Not the rich rating/review
+    // data (that lives only in Kakao's own map UI) -- but enough for an info
+    // bubble plus a `place_url` deep-link into the full Kakao place page.
+    phone?: string;
+    place_url?: string;
+    category_name?: string;
   }
 
   // Status codes passed to the keywordSearch callback.
@@ -161,6 +176,13 @@ declare global {
       yAnchor?: number;
       zIndex?: number;
     }) => KakaoCustomOverlay;
+    InfoWindow: new (options: {
+      content?: string | HTMLElement;
+      // `removable: true` renders the X close button (matches the Kakao
+      // place-detail popup the picker mimics).
+      removable?: boolean;
+      zIndex?: number;
+    }) => KakaoInfoWindow;
     Polyline: new (options: {
       path: KakaoLatLng[];
       strokeWeight?: number;

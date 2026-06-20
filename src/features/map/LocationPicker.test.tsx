@@ -17,6 +17,8 @@ const captured = {
   mapClickHandlers: [] as Array<(e: { latLng: KakaoLatLng }) => void>,
   markers: [] as FakeMarker[],
   setCenterCalls: [] as Array<{ lat: number; lng: number }>,
+  infoWindowContent: [] as string[],
+  infoWindowOpenCount: 0,
 };
 
 // Canned place-search results returned by keywordSearch.
@@ -24,6 +26,11 @@ let searchResults: Array<{
   place_name: string;
   x: string; // lng
   y: string; // lat
+  category_name?: string;
+  road_address_name?: string;
+  address_name?: string;
+  phone?: string;
+  place_url?: string;
 }> = [];
 let searchStatus = 'OK';
 
@@ -65,6 +72,15 @@ function makeKakao(): KakaoNamespace {
       captured.markers.push(marker);
       return marker;
     }),
+    InfoWindow: vi.fn(() => ({
+      setContent: vi.fn((content: string) => {
+        captured.infoWindowContent.push(content);
+      }),
+      open: vi.fn(() => {
+        captured.infoWindowOpenCount += 1;
+      }),
+      close: vi.fn(),
+    })),
     event: {
       addListener: vi.fn(
         (_target: unknown, type: string, cb: (e: unknown) => void) => {
@@ -104,6 +120,8 @@ beforeEach(() => {
   captured.mapClickHandlers = [];
   captured.markers = [];
   captured.setCenterCalls = [];
+  captured.infoWindowContent = [];
+  captured.infoWindowOpenCount = 0;
   searchResults = [];
   searchStatus = 'OK';
   loadKakaoMaps.mockResolvedValue(makeKakao());
@@ -180,6 +198,35 @@ describe('LocationPicker keyword search (A8 place search)', () => {
         name: '성심당 본점',
       }),
     );
+  });
+
+  it('opens an info bubble with place details when a result is selected', async () => {
+    searchResults = [
+      {
+        place_name: '성심당 본점',
+        x: '127.4276',
+        y: '36.3275',
+        category_name: '음식점 > 베이커리',
+        road_address_name: '대전 중구 대종로480번길 15',
+        phone: '042-229-5302',
+        place_url: 'http://place.map.kakao.com/123',
+      },
+    ];
+    render(<LocationPicker onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    await waitFor(() => expect(captured.mapClickHandlers.length).toBe(1));
+
+    await userEvent.type(screen.getByTestId('picker-search-input'), '성심당');
+    await userEvent.click(screen.getByTestId('picker-search-submit'));
+    await userEvent.click(await screen.findByText('성심당 본점'));
+
+    expect(captured.infoWindowOpenCount).toBe(1);
+    const content = captured.infoWindowContent.at(-1) ?? '';
+    expect(content).toContain('성심당 본점');
+    expect(content).toContain('음식점 &gt; 베이커리'); // HTML-escaped
+    expect(content).toContain('대전 중구 대종로480번길 15');
+    expect(content).toContain('042-229-5302');
+    expect(content).toContain('http://place.map.kakao.com/123');
+    expect(content).toContain('상세보기');
   });
 
   it('shows a no-results message when the search returns nothing', async () => {
