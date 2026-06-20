@@ -558,6 +558,7 @@ export default function TourDetail() {
             // green captions. order_index / shared plan order is untouched.
             sortMode={sortMode}
             distanceBySpot={distanceBySpot}
+            menusBySpot={menusBySpot}
           />
         )}
 

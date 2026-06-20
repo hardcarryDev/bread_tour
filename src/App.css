@@ -480,6 +480,29 @@ button.danger {
   flex-wrap: wrap;
 }
 
+/* Inline recommended-menu block: full width so it sits on its own line under
+   the spot row (the row is a wrapping flex container). */
+.spot-menus {
+  flex: 1 0 100%;
+  font-size: 0.85rem;
+  border-top: 1px dashed #ece3d5;
+  padding-top: 0.4rem;
+}
+
+.spot-menus-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.spot-menu-text {
+  font-weight: 600;
+  color: #6b4a1f;
+}
+
 .spot-actions button {
   min-width: 2.25rem;
   min-height: 2.25rem; /* touch target (NFR-RESP-002) */

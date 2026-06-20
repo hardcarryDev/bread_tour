@@ -42,6 +42,33 @@ describe('SpotList ordering display (REQ-F1-005 / AC-F1-07)', () => {
   });
 });
 
+describe('SpotList recommended-menu display (REQ-F4-002/003)', () => {
+  it('shows recommended menus with contributor inline per spot', () => {
+    render(
+      <SpotList
+        spots={spots}
+        isOwner={false}
+        onReorder={vi.fn()}
+        menusBySpot={{
+          s1: [
+            {
+              id: 'mn1',
+              spot_id: 's1',
+              author_id: 'u1',
+              menu_text: '소금빵',
+              author: { display_name: 'Alice' },
+            } as never,
+          ],
+        }}
+      />,
+    );
+    // s1 shows its menu + contributor; s2 (no menu) shows the empty state.
+    expect(screen.getByText('소금빵')).toBeInTheDocument();
+    expect(screen.getByText(/Alice/)).toBeInTheDocument();
+    expect(screen.getByText('추천 메뉴 없음')).toBeInTheDocument();
+  });
+});
+
 describe('SpotList reorder controls (REQ-F3-003 / AC-F3-02, AC-F5-06)', () => {
   it('moving a spot down calls onReorder with the new id order', async () => {
     const onReorder = vi.fn();

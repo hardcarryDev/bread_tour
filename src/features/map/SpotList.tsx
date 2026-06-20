@@ -1,4 +1,5 @@
 import type { Spot } from '../../types/database';
+import type { SpotMenuWithAuthor } from '../menu/api';
 import {
   formatDistance,
   formatDuration,
@@ -29,6 +30,10 @@ interface SpotListProps {
   // Per-spot distance/time keyed by spot id. A null entry means the route failed
   // for that spot (sorts last, no caption). Only consulted when sortMode is set.
   distanceBySpot?: Record<string, SpotDistance | null>;
+  // spot_id -> recommended menus (with contributor). Shown inline per row so the
+  // signature/recommended menu is visible without opening the map marker
+  // (REQ-F4-002/003). Empty / missing => "추천 메뉴 없음".
+  menusBySpot?: Record<string, SpotMenuWithAuthor[]>;
 }
 
 // Mode word for the green caption, matching the DirectionsPanel basis labels.
@@ -55,6 +60,7 @@ export default function SpotList({
   onEdit,
   sortMode,
   distanceBySpot,
+  menusBySpot = {},
 }: SpotListProps) {
   // The shared plan order — the up/down arrows always reorder against THIS.
   const planOrdered = [...spots].sort((a, b) => a.order_index - b.order_index);
@@ -156,6 +162,26 @@ export default function SpotList({
                 </button>
               )}
             </span>
+
+            {/* Recommended/signature menu, inline per row (REQ-F4-002/003) so it
+                is visible without opening the map marker. */}
+            <div className="spot-menus" data-testid="spot-menus">
+              {(menusBySpot[spot.id]?.length ?? 0) === 0 ? (
+                <span className="muted spot-menus-empty">추천 메뉴 없음</span>
+              ) : (
+                <ul className="spot-menus-list">
+                  {menusBySpot[spot.id]!.map((m) => (
+                    <li key={m.id}>
+                      <span className="spot-menu-text">{m.menu_text}</span>
+                      <span className="muted">
+                        {' '}
+                        — {m.author?.display_name ?? m.author_id}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </li>
         );
       })}
