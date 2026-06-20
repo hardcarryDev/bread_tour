@@ -62,6 +62,12 @@ import { errorMessage } from '../lib/errors';
 // bundle (Slice A noted a 456KB baseline). The spot list works without it.
 const MapView = lazy(() => import('../features/map/MapView'));
 
+// Modes for the "전체 경로 보기" overlay control only. 'straight' (직선) draws the
+// visit order as plain connectors with no routing API call; 'car'/'walk' are a
+// subset of the shared TravelMode and use the road-routing path. (대중교통/transit
+// stays on the separate DirectionsPanel, not on this control.)
+type RouteOverlayMode = 'straight' | 'car' | 'walk';
+
 // Tour detail shell. Spots / map / stamps arrive in Slice B — only the
 // lifecycle + permission surface (F6) is implemented here. Owner-only controls
 // are gated on the current user's role (REQ-F6-004/005/006). RLS is the real
@@ -92,13 +98,17 @@ export default function TourDetail() {
   // onRoute callback so the actual Kakao road polyline is drawn, not just the
   // straight spot-order connector. undefined => no route currently shown.
   const [routePath, setRoutePath] = useState<LatLng[] | undefined>(undefined);
-  // Whole-tour road route overlay (REQ-F2-001): on-demand per travel mode
-  // (도보/대중교통/차). Each leg is drawn in its own color. `routeLegs` holds the
+  // Whole-tour route overlay (REQ-F2-001): on-demand per overlay mode
+  // (직선/차/도보). Each leg is drawn in its own color. `routeLegs` holds the
   // per-segment geometry; `routeModeShown` is the mode currently drawn (null =
-  // none); `routeBusy` is the mode being fetched.
+  // none); `routeBusy` is the mode being fetched. This control has its own
+  // 'straight' (직선) mode which the shared TravelMode does not include, so it
+  // uses a LOCAL union — `travelMode`/DirectionsPanel stay TravelMode.
   const [routeLegs, setRouteLegs] = useState<LatLng[][] | undefined>(undefined);
-  const [routeModeShown, setRouteModeShown] = useState<TravelMode | null>(null);
-  const [routeBusy, setRouteBusy] = useState<TravelMode | null>(null);
+  const [routeModeShown, setRouteModeShown] = useState<RouteOverlayMode | null>(
+    null,
+  );
+  const [routeBusy, setRouteBusy] = useState<RouteOverlayMode | null>(null);
 
   // Selected travel mode, lifted from DirectionsPanel so BOTH the directions
   // toggle AND the "내기준정렬" button read the same mode (Feature). Default 차/car.
@@ -351,11 +361,13 @@ export default function TourDetail() {
     }
   }
 
-  // Show the whole-tour route for a travel mode (도보/대중교통/차), drawing each
+  // Show the whole-tour route for an overlay mode (직선/차/도보), drawing each
   // visit-order segment in its own color. Clicking the mode that is already
-  // shown toggles it off. getPathRoute never throws (each leg degrades to a
-  // straight segment), so the map stays usable even if routing fails.
-  async function showRouteForMode(mode: TravelMode) {
+  // shown toggles it off. For 직선 (straight) we build the connectors locally
+  // with no routing call (instant). For 차/도보 we fetch the real road path;
+  // getPathRoute never throws (each leg degrades to a straight segment), so the
+  // map stays usable even if routing fails.
+  async function showRouteForMode(mode: RouteOverlayMode) {
     if (routeModeShown === mode) {
       setRouteModeShown(null);
       setRouteLegs(undefined);
@@ -363,6 +375,25 @@ export default function TourDetail() {
     }
     const ordered = [...spots].sort((a, b) => a.order_index - b.order_index);
     if (ordered.length < 2) return;
+
+    // 직선: straight connectors between adjacent spots, no routing API call.
+    if (mode === 'straight') {
+      const legPaths: LatLng[][] = [];
+      for (let i = 0; i < ordered.length - 1; i++) {
+        const a = ordered[i];
+        const b = ordered[i + 1];
+        legPaths.push([
+          { lat: a.lat, lng: a.lng },
+          { lat: b.lat, lng: b.lng },
+        ]);
+      }
+      setActionError(null);
+      setRouteLegs(legPaths);
+      setRouteModeShown('straight');
+      return;
+    }
+
+    // 차/도보: real road path. mode is 'car' | 'walk' here, both ⊂ TravelMode.
     setRouteBusy(mode);
     setActionError(null);
     try {
@@ -734,51 +765,60 @@ export default function TourDetail() {
           />
         )}
 
-        <Suspense
-          fallback={
-            <p className="muted" role="status">
-              지도 불러오는 중...
-            </p>
-          }
-        >
-          {/* Slice C wires real stamp status into the map summary placeholder. */}
-          <MapView
-            spots={spots}
-            menusBySpot={menusBySpot}
-            stampBySpot={stampBySpot}
-            routePath={routePath}
-            routeLegs={routeLegs}
-            // Live "내 위치" marker while GPS tracking is active. This is the
-            // same in-memory fix used for directions (NFR-GEO-006: never
-            // persisted); it appears while tracking and clears to null on stop.
-            currentLocation={geo.currentPosition}
-          />
-        </Suspense>
+        {/* Map on the left (shrinks to fit), the whole-tour route control as a
+            vertical button column on the right. */}
+        <div className="map-with-route">
+          <Suspense
+            fallback={
+              <p className="muted" role="status">
+                지도 불러오는 중...
+              </p>
+            }
+          >
+            {/* Slice C wires real stamp status into the map summary placeholder. */}
+            <MapView
+              spots={spots}
+              menusBySpot={menusBySpot}
+              stampBySpot={stampBySpot}
+              routePath={routePath}
+              routeLegs={routeLegs}
+              // Live "내 위치" marker while GPS tracking is active. This is the
+              // same in-memory fix used for directions (NFR-GEO-006: never
+              // persisted); it appears while tracking and clears to null on stop.
+              currentLocation={geo.currentPosition}
+            />
+          </Suspense>
 
-        {/* Whole-tour road route per mode (REQ-F2-001): draw the visit order as
-            the real road-following path, each segment in its own color. One
-            button per mode; the active mode toggles off when pressed again. */}
-        {spots.length >= 2 && (
-          <div className="route-mode-control" role="group" aria-label="전체 경로 보기">
-            {([
-              { mode: 'walk', label: '도보' },
-              { mode: 'transit', label: '대중교통' },
-              { mode: 'car', label: '차' },
-            ] as const).map(({ mode, label }) => (
-              <button
-                key={mode}
-                type="button"
-                className="route-mode-btn"
-                aria-pressed={routeModeShown === mode}
-                data-testid={`route-mode-${mode}`}
-                onClick={() => void showRouteForMode(mode)}
-                disabled={routeBusy !== null}
-              >
-                {routeBusy === mode ? '계산 중…' : label}
-              </button>
-            ))}
-          </div>
-        )}
+          {/* Whole-tour route per mode (REQ-F2-001): draw the visit order either
+              as straight connectors (직선) or the real road-following path
+              (차/도보), each segment in its own color. One button per mode; the
+              active mode toggles off when pressed again. */}
+          {spots.length >= 2 && (
+            <div
+              className="route-mode-control route-mode-control--side"
+              role="group"
+              aria-label="전체 경로 보기"
+            >
+              {([
+                { mode: 'straight', label: '직선' },
+                { mode: 'car', label: '차' },
+                { mode: 'walk', label: '도보' },
+              ] as const).map(({ mode, label }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className="route-mode-btn"
+                  aria-pressed={routeModeShown === mode}
+                  data-testid={`route-mode-${mode}`}
+                  onClick={() => void showRouteForMode(mode)}
+                  disabled={routeBusy !== null}
+                >
+                  {routeBusy === mode ? '계산 중…' : label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Directions (F2): route between two chosen spots. */}
         <DirectionsPanel
