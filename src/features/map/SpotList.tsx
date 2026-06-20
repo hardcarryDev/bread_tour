@@ -101,9 +101,7 @@ export default function SpotList({
               {index + 1}
             </span>
             <span className="spot-name">{spot.name}</span>
-            <span className="muted spot-kind">
-              {spot.kind === 'bakery' ? '빵집' : '음식점'}
-            </span>
+            <span className="muted spot-kind">{spot.kind}</span>
 
             {/* Green one-line distance caption (Feature). Shown only when a local
                 sort is active and this spot has a result. Failed spots show a

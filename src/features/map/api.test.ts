@@ -117,12 +117,12 @@ describe('addSpot (REQ-F1-001 / AC-F1-06)', () => {
     );
   });
 
-  it('defaults kind to bakery when not provided', async () => {
+  it('defaults kind to 빵집 when not provided', async () => {
     const b = builder({ data: { id: 's5' }, error: null });
     mockedFrom.mockReturnValue(b);
     await addSpot({ tourId: 't1', name: 'x', lat: 1, lng: 2, existingCount: 0 });
     expect(b.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'bakery' }),
+      expect.objectContaining({ kind: '빵집' }),
     );
   });
 });

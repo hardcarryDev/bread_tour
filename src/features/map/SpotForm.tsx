@@ -29,7 +29,7 @@ interface SpotFormProps {
 // real coordinate. Submit is blocked until a coordinate exists (AC-F1-06).
 export default function SpotForm({ onSubmit, onCancel, initial }: SpotFormProps) {
   const [name, setName] = useState(initial?.name ?? '');
-  const [kind, setKind] = useState<SpotKind>(initial?.kind ?? 'bakery');
+  const [kind, setKind] = useState<SpotKind>(initial?.kind ?? '빵집');
   const [menuText, setMenuText] = useState('');
   const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(
     initial?.lat != null && initial?.lng != null
@@ -67,7 +67,8 @@ export default function SpotForm({ onSubmit, onCancel, initial }: SpotFormProps)
         name: name.trim(),
         lat: coord.lat,
         lng: coord.lng,
-        kind,
+        // Never send a blank category (DB requires 1-50 chars); fall back to 빵집.
+        kind: kind.trim() || '빵집',
         menuText: menuText.trim(),
       });
     } catch (err) {
@@ -90,13 +91,21 @@ export default function SpotForm({ onSubmit, onCancel, initial }: SpotFormProps)
 
       <label>
         종류
-        <select
+        {/* Free text (migration 9): 빵집/음식점 are quick suggestions via the
+            datalist, but members can type any category (카페, 디저트, ...). */}
+        <input
+          type="text"
+          list="spot-kind-options"
           value={kind}
-          onChange={(e) => setKind(e.target.value as SpotKind)}
-        >
-          <option value="bakery">빵집</option>
-          <option value="restaurant">음식점</option>
-        </select>
+          onChange={(e) => setKind(e.target.value)}
+          placeholder="예: 빵집, 음식점, 카페"
+        />
+        <datalist id="spot-kind-options">
+          <option value="빵집" />
+          <option value="음식점" />
+          <option value="카페" />
+          <option value="디저트" />
+        </datalist>
       </label>
 
       <div className="spot-form-location">

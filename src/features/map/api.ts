@@ -46,7 +46,7 @@ export async function addSpot(params: {
     .insert({
       tour_id: params.tourId,
       name: params.name,
-      kind: params.kind ?? 'bakery',
+      kind: params.kind ?? '빵집',
       lat: params.lat,
       lng: params.lng,
       radius_m: params.radiusM ?? DEFAULT_RADIUS_M,

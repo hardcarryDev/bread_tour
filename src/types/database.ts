@@ -15,7 +15,9 @@
 // ---------------------------------------------------------------------------
 export type TourMemberRole = 'owner' | 'member';
 export type TourInviteStatus = 'pending' | 'accepted' | 'rejected';
-export type SpotKind = 'bakery' | 'restaurant';
+// Free text since migration 9 (20260620000500): members can enter any spot
+// category, not just 빵집/음식점. Stored verbatim as the displayed label.
+export type SpotKind = string;
 export type StampMethod = 'auto' | 'manual';
 export type ManualCheckInStatus = 'pending' | 'confirmed' | 'cancelled';
 

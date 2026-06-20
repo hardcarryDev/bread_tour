@@ -99,6 +99,21 @@ describe('SpotForm coordinate capture + menu fields (REQ-F1-001, REQ-F4-001 / AC
     expect(arg.menuText).toBe('소금빵');
   });
 
+  it('submits a custom free-text 종류 (not limited to 빵집/음식점)', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<SpotForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    await userEvent.type(screen.getByLabelText(/이름/), '미뉴트빠삐용');
+    const kindField = screen.getByLabelText(/종류/);
+    await userEvent.clear(kindField);
+    await userEvent.type(kindField, '카페');
+    await pickLocationOnMap(36.3275, 127.4276);
+    await userEvent.click(screen.getByRole('button', { name: /저장/ }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0].kind).toBe('카페');
+  });
+
   it('allows an empty menu (REQ-F4-004 / AC-F4-03)', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<SpotForm onSubmit={onSubmit} onCancel={vi.fn()} />);
@@ -156,10 +171,12 @@ describe('SpotForm coordinate capture + menu fields (REQ-F1-001, REQ-F4-001 / AC
       <SpotForm
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
-        initial={{ name: '기존 빵집', lat: 37.5, lng: 127, kind: 'restaurant' }}
+        initial={{ name: '기존 빵집', lat: 37.5, lng: 127, kind: '음식점' }}
       />,
     );
     expect(screen.getByLabelText(/이름/)).toHaveValue('기존 빵집');
+    // 종류 is now a free-text field and reflects the existing value.
+    expect(screen.getByLabelText(/종류/)).toHaveValue('음식점');
     // Existing coordinate is shown without opening the picker.
     expect(screen.getByTestId('picked-coord')).toHaveTextContent(
       '37.50000, 127.00000',
