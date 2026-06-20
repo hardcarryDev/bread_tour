@@ -1260,3 +1260,68 @@ create policy tours_select on public.tours
     owner_id = auth.uid ()
     or public.is_tour_member (id)
   );
+
+-- =============================================================================
+-- SPEC-BREADTOUR-001 :: Migration 8 / Idempotent re-click of accept_invite
+-- Source file: supabase/migrations/20260620000400_accept_invite_idempotent.sql
+-- Defect: a user who already accepted an invite and re-opens the same link gets
+-- "invalid or already-used invite" instead of being taken back into the tour,
+-- because accept_invite() raises on `status <> 'pending'` before returning the
+-- tour id.
+-- =============================================================================
+-- FIX (minimal, single-use protection preserved):
+--   When the invite is no longer 'pending', if the CALLER is already a member of
+--   that tour, return the tour id (idempotent success) instead of raising. A
+--   non-member hitting a used/rejected link is still rejected.
+-- =============================================================================
+
+create or replace function public.accept_invite (
+  p_token text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_invite public.tour_invites%rowtype;
+begin
+  if auth.uid () is null then
+    raise exception 'authentication required to accept an invite'
+      using errcode = '42501';
+  end if;
+
+  select * into v_invite
+  from public.tour_invites
+  where token = p_token
+  for update;
+
+  if not found then
+    raise exception 'invalid invite token'
+      using errcode = 'P0002';
+  end if;
+
+  if v_invite.status <> 'pending' then
+    if exists (
+      select 1
+      from public.tour_members
+      where tour_id = v_invite.tour_id
+        and user_id = auth.uid ()
+    ) then
+      return v_invite.tour_id;
+    end if;
+    raise exception 'invalid or already-used invite'
+      using errcode = '22023';
+  end if;
+
+  insert into public.tour_members (tour_id, user_id, role)
+  values (v_invite.tour_id, auth.uid (), 'member')
+  on conflict (tour_id, user_id) do nothing;
+
+  update public.tour_invites
+  set status = 'accepted'
+  where id = v_invite.id;
+
+  return v_invite.tour_id;
+end;
+$$;
