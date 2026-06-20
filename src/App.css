@@ -586,7 +586,7 @@ button.menu-thumb {
    the right. Compact enough to fit a ~360px mobile viewport. */
 .map-with-route {
   display: flex;
-  gap: 0.5rem;
+  gap: 0;
   align-items: stretch;
   margin-top: 1rem;
 }
@@ -600,9 +600,14 @@ button.menu-thumb {
 .route-mode-control--side {
   flex: 0 0 auto;
   flex-direction: column;
-  width: 4rem;
+  width: 2.5rem;
   margin: 0;
   align-self: flex-start;
+  /* Flush against the map: flatten the corners touching the map and drop the
+     shared border so the strip reads as attached, freeing horizontal space. */
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 .route-mode-control--side .route-mode-btn {
@@ -613,6 +618,22 @@ button.menu-thumb {
 .route-mode-control--side .route-mode-btn + .route-mode-btn {
   border-left: none;
   border-top: 1px solid #e0d5c5;
+}
+
+/* Icon-only mode buttons: center the glyph, no text padding, dim while busy. */
+.route-mode-btn--icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.route-mode-btn--icon svg {
+  display: block;
+}
+
+.route-mode-btn[aria-busy='true'] {
+  opacity: 0.5;
 }
 
 .route-loading {

@@ -68,6 +68,49 @@ const MapView = lazy(() => import('../features/map/MapView'));
 // stays on the separate DirectionsPanel, not on this control.)
 type RouteOverlayMode = 'straight' | 'car' | 'walk';
 
+// Compact line-icon per route mode (직선/차/도보), drawn with currentColor so it
+// inherits the button's active/inactive text color. aria-hidden — the button
+// itself carries the Korean accessible name via aria-label.
+function RouteModeIcon({ mode }: { mode: RouteOverlayMode }) {
+  const common = {
+    viewBox: '0 0 24 24',
+    width: 22,
+    height: 22,
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  };
+  if (mode === 'straight') {
+    return (
+      <svg {...common}>
+        <line x1="5" y1="19" x2="19" y2="5" />
+        <circle cx="5" cy="19" r="2" fill="currentColor" stroke="none" />
+        <circle cx="19" cy="5" r="2" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (mode === 'car') {
+    return (
+      <svg {...common}>
+        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+        <circle cx="7" cy="17" r="2" />
+        <path d="M9 17h6" />
+        <circle cx="17" cy="17" r="2" />
+      </svg>
+    );
+  }
+  // walk — a pair of footprints.
+  return (
+    <svg {...common}>
+      <path d="M4 16v-2.4C4 11.5 3 10.5 3 8c0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z" />
+      <path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z" />
+    </svg>
+  );
+}
+
 // Tour detail shell. Spots / map / stamps arrive in Slice B — only the
 // lifecycle + permission surface (F6) is implemented here. Owner-only controls
 // are gated on the current user's role (REQ-F6-004/005/006). RLS is the real
@@ -806,13 +849,16 @@ export default function TourDetail() {
                 <button
                   key={mode}
                   type="button"
-                  className="route-mode-btn"
+                  className="route-mode-btn route-mode-btn--icon"
                   aria-pressed={routeModeShown === mode}
+                  aria-busy={routeBusy === mode}
+                  aria-label={label}
+                  title={label}
                   data-testid={`route-mode-${mode}`}
                   onClick={() => void showRouteForMode(mode)}
                   disabled={routeBusy !== null}
                 >
-                  {routeBusy === mode ? '계산 중…' : label}
+                  <RouteModeIcon mode={mode} />
                 </button>
               ))}
             </div>
