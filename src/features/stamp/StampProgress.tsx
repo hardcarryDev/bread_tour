@@ -51,15 +51,23 @@ export default function StampProgress({
           (isOwner || status?.userId === currentUserId);
 
         return (
-          <li key={spot.id} className="stamp-progress-item">
+          <li
+            key={spot.id}
+            className={`stamp-progress-item${stamped ? ' is-stamped' : ''}`}
+          >
             <span className="spot-order" aria-hidden="true">
-              {index + 1}
+              {stamped ? '✓' : index + 1}
             </span>
             <span className="spot-name">{spot.name}</span>
             <span
-              className={stamped ? 'stamp-acquired' : 'muted'}
+              className={`stamp-badge ${stamped ? 'stamp-badge--on stamp-acquired' : 'stamp-badge--off'}`}
               data-testid={`stamp-status-${spot.id}`}
             >
+              {stamped && (
+                <span className="stamp-badge-check" aria-hidden="true">
+                  ✓
+                </span>
+              )}
               {stamped ? '획득' : '미획득'}
             </span>
             {stamped && status?.arrivedAt && (

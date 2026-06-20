@@ -888,6 +888,85 @@ button.menu-thumb {
   word-break: break-word;
 }
 
+/* --- Stamp progress list (스탬프) --------------------------------------- */
+/* Tidy spacing for the section so the heading/description/tracker/list flow. */
+.stamp-panel > p {
+  margin: 0.25rem 0 0.75rem;
+}
+
+/* Clean vertical list of stamp rows; drop default bullets + numbering clash. */
+.stamp-progress {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Each row is a soft card; name fills the middle, badge pushed to the right. */
+.stamp-progress-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #e8ddc9;
+  border-radius: 0.6rem;
+  background: #fff;
+  flex-wrap: wrap;
+}
+
+/* Recolor the order circle inside the stamp list when the spot is stamped
+   (green), leaving the shared SpotList .spot-order base rule untouched. */
+.stamp-progress-item.is-stamped .spot-order {
+  background: #16a34a;
+}
+
+/* Gentle success treatment for a stamped row: soft green wash + accent border. */
+.stamp-progress-item.is-stamped {
+  background: #f6fef9;
+  border-color: #cdeeda;
+  border-left: 3px solid #16a34a;
+}
+
+/* Status pill, pushed to the far right so the name fills the middle. */
+.stamp-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 미획득 — subtle muted pill in the warm cream/brown palette. */
+.stamp-badge--off {
+  background: #efe3d2;
+  color: #8a7355;
+  border: 1px solid #e0d5c5;
+}
+
+/* 획득 — tasteful green success pill. */
+.stamp-badge--on {
+  background: #ecfdf3;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.stamp-badge-check {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+/* Arrival time + cancel button wrap below the row on narrow (360px) screens. */
+.stamp-time {
+  flex: 1 0 100%;
+  font-size: 0.8rem;
+}
+
 /* "내기준정렬" + "장소 추가" action group; wraps and stays usable at 360px. */
 .spots-panel-actions {
   display: flex;

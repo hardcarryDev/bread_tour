@@ -175,6 +175,18 @@ export default function TourDetail() {
   // Slice C: stamp status (REQ-F1-005) + GPS auto-stamp pipeline (F1) + directions.
   const { stampBySpot, stampedSpotIds, reload: reloadStamps } = useStamps(tourId);
 
+  // TEMP PREVIEW — remove later. Force the first stamp to show as 획득 so the
+  // stamped-row design is visible without a real GPS check-in. Only affects the
+  // StampProgress list below; MapView and StampTracker keep the real stampBySpot.
+  const stampPreview = useMemo(() => {
+    const first = [...spots].sort((a, b) => a.order_index - b.order_index)[0];
+    if (!first || stampBySpot[first.id]?.stamped) return stampBySpot;
+    return {
+      ...stampBySpot,
+      [first.id]: { stamped: true, arrivedAt: new Date().toISOString() },
+    };
+  }, [spots, stampBySpot]);
+
   // Manual check-in fallback (REQ-F1-007 / AC-F1-04): pending peer-confirmation
   // requests for this tour. Refreshed live by the realtime hook below.
   const { pendingRequests, reload: reloadPendingCheckIns } =
@@ -898,7 +910,7 @@ export default function TourDetail() {
         />
         <StampProgress
           spots={spots}
-          stampBySpot={stampBySpot}
+          stampBySpot={stampPreview}
           currentUserId={user?.id}
           isOwner={isOwner}
           onCancel={handleCancelStamp}
