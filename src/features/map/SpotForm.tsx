@@ -88,8 +88,9 @@ export default function SpotForm({
   const [addMenuText, setAddMenuText] = useState('');
   // New-menu photo picker: uncontrolled file input read on "메뉴 추가".
   const newMenuFilesRef = useRef<HTMLInputElement | null>(null);
+  // Count of files chosen for the new menu (drives a small "N장 선택됨" hint).
   const [newMenuFileCount, setNewMenuFileCount] = useState(0);
-  // Disable menu controls while an image upload is in flight.
+  // Disable controls while an image upload is in flight (uploads can be slow).
   const [busyMenu, setBusyMenu] = useState(false);
   const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(
     initial?.lat != null && initial?.lng != null
@@ -130,8 +131,8 @@ export default function SpotForm({
   }
 
   // Register a new signature menu immediately (edit mode), with any chosen
-  // photos. A menu may be added with photos only (no text) too. Not a form
-  // submit — preventDefault on Enter keeps the surrounding <form> from submitting.
+  // photos. Not a form submit — preventDefault on Enter keeps the surrounding
+  // <form> from submitting. A menu may be added with photos only (no text) too.
   async function handleAddMenu() {
     const value = addMenuText.trim();
     const files = Array.from(newMenuFilesRef.current?.files ?? []);
@@ -312,9 +313,7 @@ export default function SpotForm({
                 return (
                   <li key={m.id}>
                     <div className="spot-menu-row">
-                      <span className="spot-menu-text">
-                        {m.menu_text || '(사진)'}
-                      </span>
+                      <span className="spot-menu-text">{m.menu_text}</span>
                       <span className="muted">
                         {' '}
                         — {m.author?.display_name ?? m.author_id}
@@ -323,7 +322,7 @@ export default function SpotForm({
                         <button
                           type="button"
                           className="menu-delete"
-                          aria-label={`메뉴 삭제: ${m.menu_text || '사진 메뉴'}`}
+                          aria-label={`메뉴 삭제: ${m.menu_text}`}
                           title="삭제"
                           onClick={() => void handleDeleteMenu(m.id)}
                         >
