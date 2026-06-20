@@ -378,6 +378,12 @@ button.danger {
   flex-wrap: wrap;
 }
 
+/* On-demand "차 경로 보기" toggle, sits between the map and the directions panel. */
+.car-route-control {
+  display: flex;
+  margin: 0.5rem 0;
+}
+
 .route-loading {
   padding: 2rem 1rem;
   text-align: center;

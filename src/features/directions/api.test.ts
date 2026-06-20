@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getRoute } from './api';
+import { getPathRoute, getRoute } from './api';
 import type { LatLng, RouteResult } from './route';
 
 // Mock the shared supabase client so the default transport
@@ -126,5 +126,72 @@ describe('getRoute default transport (directions Edge Function via supabase.func
     const r = await getRoute(A, B);
     expect(r.fallback).toBe(true); // function error => default transport throws => fallback
     expect(r.path).toHaveLength(2);
+  });
+});
+
+describe('getPathRoute (whole-tour multi-leg road route, REQ-F2-001)', () => {
+  const P = [
+    { lat: 37.50, lng: 127.0 },
+    { lat: 37.51, lng: 127.0 },
+    { lat: 37.52, lng: 127.0 },
+  ];
+
+  it('concatenates leg paths, dropping the shared junction point', async () => {
+    // Two legs: A->B (3 pts) and B->C (3 pts). Junction (B's last == C's first)
+    // is dropped, so the combined path is 3 + (3-1) = 5 points.
+    const fetchRoute = vi
+      .fn()
+      .mockResolvedValueOnce({
+        path: [P[0], { lat: 37.505, lng: 127.0 }, P[1]],
+        distanceM: 1000,
+        durationSec: 300,
+        fallback: false,
+      } as RouteResult)
+      .mockResolvedValueOnce({
+        path: [P[1], { lat: 37.515, lng: 127.0 }, P[2]],
+        distanceM: 1200,
+        durationSec: 360,
+        fallback: false,
+      } as RouteResult);
+
+    const r = await getPathRoute(P, { fetchRoute, mode: 'car' });
+
+    expect(fetchRoute).toHaveBeenCalledTimes(2);
+    expect(r.path).toHaveLength(5);
+    expect(r.path[0]).toEqual(P[0]);
+    expect(r.path[r.path.length - 1]).toEqual(P[2]);
+    expect(r.distanceM).toBe(2200);
+    expect(r.durationSec).toBe(660);
+    expect(r.fallback).toBe(false);
+    expect(r.mode).toBe('car');
+  });
+
+  it('marks the whole route as fallback if any leg fell back to a straight line', async () => {
+    const fetchRoute = vi
+      .fn()
+      .mockResolvedValueOnce({
+        path: [P[0], P[1]],
+        distanceM: 1000,
+        durationSec: 300,
+        fallback: false,
+      } as RouteResult)
+      // Too-short path -> getRoute applies its straight-line fallback.
+      .mockResolvedValueOnce({
+        path: [P[1]],
+        distanceM: 0,
+        durationSec: 0,
+        fallback: false,
+      } as RouteResult);
+
+    const r = await getPathRoute(P, { fetchRoute });
+    expect(r.fallback).toBe(true);
+  });
+
+  it('returns a trivial result for fewer than two points', async () => {
+    const fetchRoute = vi.fn();
+    const r = await getPathRoute([P[0]], { fetchRoute });
+    expect(fetchRoute).not.toHaveBeenCalled();
+    expect(r.path).toEqual([P[0]]);
+    expect(r.distanceM).toBe(0);
   });
 });

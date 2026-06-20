@@ -80,3 +80,34 @@ export async function getRoute(
     return straightLineRoute(from, to);
   }
 }
+
+// Route through an ordered list of waypoints (the whole tour: 1->2->3->...),
+// returning one concatenated RouteResult so the map can draw the road-following
+// path instead of the straight visit-order connector (REQ-F2-001). Each leg
+// uses getRoute, so any failed leg degrades to a straight segment without
+// breaking the rest. Legs run in parallel; the duplicated junction point
+// between consecutive legs is dropped when concatenating.
+export async function getPathRoute(
+  points: LatLng[],
+  opts: { fetchRoute?: FetchRoute; mode?: TravelMode } = {},
+): Promise<RouteResult> {
+  const mode = opts.mode ?? 'car';
+  if (points.length < 2) {
+    return { path: [...points], distanceM: 0, durationSec: 0, fallback: true, mode };
+  }
+  const legs = await Promise.all(
+    points.slice(0, -1).map((from, i) => getRoute(from, points[i + 1], opts)),
+  );
+  const path: LatLng[] = [];
+  let distanceM = 0;
+  let durationSec = 0;
+  let fallback = false;
+  legs.forEach((leg, i) => {
+    distanceM += leg.distanceM;
+    durationSec += leg.durationSec;
+    fallback = fallback || leg.fallback;
+    // Drop the shared junction point (leg N's last == leg N+1's first).
+    path.push(...(i === 0 ? leg.path : leg.path.slice(1)));
+  });
+  return { path, distanceM, durationSec, fallback, mode };
+}

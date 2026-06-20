@@ -34,7 +34,7 @@ import StampTracker from '../features/stamp/StampTracker';
 import StampProgress from '../features/stamp/StampProgress';
 import ManualCheckIn from '../features/stamp/ManualCheckIn';
 import DirectionsPanel from '../features/directions/DirectionsPanel';
-import { getRoute } from '../features/directions/api';
+import { getPathRoute, getRoute } from '../features/directions/api';
 import type { LatLng, TravelMode } from '../features/directions/route';
 import type { SpotDistance } from '../features/map/SpotList';
 import {
@@ -83,6 +83,10 @@ export default function TourDetail() {
   // onRoute callback so the actual Kakao road polyline is drawn, not just the
   // straight spot-order connector. undefined => no route currently shown.
   const [routePath, setRoutePath] = useState<LatLng[] | undefined>(undefined);
+  // Whole-tour car road route overlay (REQ-F2-001): on-demand, replaces the
+  // straight visit-order connector with the road-following path while shown.
+  const [carRouteOn, setCarRouteOn] = useState(false);
+  const [carRouteBusy, setCarRouteBusy] = useState(false);
 
   // Selected travel mode, lifted from DirectionsPanel so BOTH the directions
   // toggle AND the "내기준정렬" button read the same mode (Feature). Default 차/car.
@@ -332,6 +336,34 @@ export default function TourDetail() {
       reloadSpots();
     } catch (err) {
       setActionError(errorMessage(err));
+    }
+  }
+
+  // Toggle the whole-tour car road route overlay. ON: route through every spot
+  // in visit order (car) and draw the road path; OFF: clear it back to the
+  // straight connector. getPathRoute never throws (each leg degrades to a
+  // straight segment), so the map stays usable even if routing fails.
+  async function toggleCarRoute() {
+    if (carRouteOn) {
+      setCarRouteOn(false);
+      setRoutePath(undefined);
+      return;
+    }
+    const ordered = [...spots].sort((a, b) => a.order_index - b.order_index);
+    if (ordered.length < 2) return;
+    setCarRouteBusy(true);
+    setActionError(null);
+    try {
+      const result = await getPathRoute(
+        ordered.map((s) => ({ lat: s.lat, lng: s.lng })),
+        { mode: 'car' },
+      );
+      setRoutePath(result.path);
+      setCarRouteOn(true);
+    } catch (err) {
+      setActionError(errorMessage(err));
+    } finally {
+      setCarRouteBusy(false);
     }
   }
 
@@ -641,6 +673,25 @@ export default function TourDetail() {
             currentLocation={geo.currentPosition}
           />
         </Suspense>
+
+        {/* Whole-tour car road route (REQ-F2-001): draw the visit order as the
+            real road-following path instead of straight connector lines. */}
+        {spots.length >= 2 && (
+          <div className="car-route-control">
+            <button
+              type="button"
+              data-testid="toggle-car-route"
+              onClick={() => void toggleCarRoute()}
+              disabled={carRouteBusy}
+            >
+              {carRouteBusy
+                ? '경로 계산 중…'
+                : carRouteOn
+                  ? '차 경로 끄기'
+                  : '차 경로 보기'}
+            </button>
+          </div>
+        )}
 
         {/* Directions (F2): route between two chosen spots. */}
         <DirectionsPanel
