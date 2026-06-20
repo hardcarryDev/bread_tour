@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { SpotKind } from '../../types/database';
 import { errorMessage } from '../../lib/errors';
-import type { SpotMenuWithAuthor } from '../menu/api';
+import type { MenuImage, SpotMenuWithAuthor } from '../menu/api';
 import LocationPicker, { type PickedLocation } from './LocationPicker';
 
 export interface SpotFormValues {
@@ -35,8 +35,18 @@ interface SpotFormProps {
   // that registers immediately (REQ-F4). In add mode (new spot, no onAddMenu) the
   // single "추천 메뉴" field below is used instead and stored on save.
   menus?: SpotMenuWithAuthor[];
-  onAddMenu?: (text: string) => Promise<void> | void;
+  // Register a new menu. `files` are optional photos to attach to it (REQ-F4).
+  onAddMenu?: (text: string, files: File[]) => Promise<void> | void;
   onDeleteMenu?: (menuId: string) => Promise<void> | void;
+  // Attach more photos to an existing menu / detach one (REQ-F4 images).
+  onAddImagesToMenu?: (
+    menu: SpotMenuWithAuthor,
+    files: File[],
+  ) => Promise<void> | void;
+  onRemoveImage?: (
+    menu: SpotMenuWithAuthor,
+    image: MenuImage,
+  ) => Promise<void> | void;
   // Used to gate which menus show a delete control (author or owner — RLS is the
   // real guard; this just hides controls the user cannot use).
   currentUserId?: string;
@@ -56,6 +66,8 @@ export default function SpotForm({
   menus,
   onAddMenu,
   onDeleteMenu,
+  onAddImagesToMenu,
+  onRemoveImage,
   currentUserId,
   isOwner,
 }: SpotFormProps) {
@@ -74,6 +86,11 @@ export default function SpotForm({
   const [menuText, setMenuText] = useState('');
   // Edit-mode "add a signature menu" input (registers immediately via onAddMenu).
   const [addMenuText, setAddMenuText] = useState('');
+  // New-menu photo picker: uncontrolled file input read on "메뉴 추가".
+  const newMenuFilesRef = useRef<HTMLInputElement | null>(null);
+  const [newMenuFileCount, setNewMenuFileCount] = useState(0);
+  // Disable menu controls while an image upload is in flight.
+  const [busyMenu, setBusyMenu] = useState(false);
   const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(
     initial?.lat != null && initial?.lng != null
       ? { lat: initial.lat, lng: initial.lng }
@@ -112,22 +129,51 @@ export default function SpotForm({
     }
   }
 
-  // Register a new signature menu immediately (edit mode). Not a form submit —
-  // preventDefault on Enter keeps the surrounding <form> from submitting.
+  // Register a new signature menu immediately (edit mode), with any chosen
+  // photos. A menu may be added with photos only (no text) too. Not a form
+  // submit — preventDefault on Enter keeps the surrounding <form> from submitting.
   async function handleAddMenu() {
     const value = addMenuText.trim();
-    if (value.length === 0) return;
+    const files = Array.from(newMenuFilesRef.current?.files ?? []);
+    if (value.length === 0 && files.length === 0) return;
+    setBusyMenu(true);
     try {
-      await onAddMenu?.(value);
+      await onAddMenu?.(value, files);
       setAddMenuText('');
+      setNewMenuFileCount(0);
+      if (newMenuFilesRef.current) newMenuFilesRef.current.value = '';
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
+      setBusyMenu(false);
     }
   }
 
   async function handleDeleteMenu(menuId: string) {
     try {
       await onDeleteMenu?.(menuId);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  // Attach more photos to an existing menu.
+  async function handleAddImages(menu: SpotMenuWithAuthor, files: File[]) {
+    if (files.length === 0) return;
+    setBusyMenu(true);
+    try {
+      await onAddImagesToMenu?.(menu, files);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusyMenu(false);
+    }
+  }
+
+  // Detach one photo from a menu.
+  async function handleRemoveImage(menu: SpotMenuWithAuthor, image: MenuImage) {
+    try {
+      await onRemoveImage?.(menu, image);
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -261,24 +307,66 @@ export default function SpotForm({
           ) : (
             <ul className="spot-form-menu-list">
               {menus!.map((m) => {
-                const canDelete = isOwner || m.author_id === currentUserId;
+                const mine = isOwner || m.author_id === currentUserId;
+                const images = m.images ?? [];
                 return (
                   <li key={m.id}>
-                    <span className="spot-menu-text">{m.menu_text}</span>
-                    <span className="muted">
-                      {' '}
-                      — {m.author?.display_name ?? m.author_id}
-                    </span>
-                    {canDelete && (
-                      <button
-                        type="button"
-                        className="menu-delete"
-                        aria-label={`메뉴 삭제: ${m.menu_text}`}
-                        title="삭제"
-                        onClick={() => void handleDeleteMenu(m.id)}
-                      >
-                        <span aria-hidden="true">×</span>
-                      </button>
+                    <div className="spot-menu-row">
+                      <span className="spot-menu-text">{m.menu_text}</span>
+                      <span className="muted">
+                        {' '}
+                        — {m.author?.display_name ?? m.author_id}
+                      </span>
+                      {mine && (
+                        <button
+                          type="button"
+                          className="menu-delete"
+                          aria-label={`메뉴 삭제: ${m.menu_text}`}
+                          title="삭제"
+                          onClick={() => void handleDeleteMenu(m.id)}
+                        >
+                          <span aria-hidden="true">×</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {(images.length > 0 || mine) && (
+                      <div className="menu-thumbs">
+                        {images.map((img) => (
+                          <span className="menu-thumb" key={img.path}>
+                            <img src={img.url} alt={m.menu_text} loading="lazy" />
+                            {mine && (
+                              <button
+                                type="button"
+                                className="menu-thumb-remove"
+                                aria-label={`사진 삭제: ${m.menu_text}`}
+                                title="사진 삭제"
+                                onClick={() => void handleRemoveImage(m, img)}
+                              >
+                                <span aria-hidden="true">×</span>
+                              </button>
+                            )}
+                          </span>
+                        ))}
+                        {mine && (
+                          <label className="menu-thumb-add" title="사진 추가">
+                            <span aria-hidden="true">＋</span>
+                            <span className="sr-only">사진 추가</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              disabled={busyMenu}
+                              aria-label={`사진 추가: ${m.menu_text}`}
+                              onChange={(e) => {
+                                const fs = Array.from(e.target.files ?? []);
+                                e.target.value = '';
+                                void handleAddImages(m, fs);
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
                     )}
                   </li>
                 );
@@ -300,14 +388,35 @@ export default function SpotForm({
               placeholder="새 시그니처 메뉴"
               aria-label="새 시그니처 메뉴"
             />
+            <label className="menu-file-pick" title="사진 첨부">
+              <span aria-hidden="true">🖼</span>
+              <span className="sr-only">사진 첨부</span>
+              <input
+                ref={newMenuFilesRef}
+                type="file"
+                accept="image/*"
+                multiple
+                data-testid="add-menu-files"
+                aria-label="새 메뉴 사진 첨부"
+                onChange={(e) =>
+                  setNewMenuFileCount(e.target.files?.length ?? 0)
+                }
+              />
+            </label>
             <button
               type="button"
               data-testid="add-menu"
+              disabled={busyMenu}
               onClick={() => void handleAddMenu()}
             >
               메뉴 추가
             </button>
           </div>
+          {newMenuFileCount > 0 && (
+            <span className="muted" data-testid="add-menu-file-count">
+              사진 {newMenuFileCount}장 선택됨
+            </span>
+          )}
         </div>
       ) : (
         <label>

@@ -203,6 +203,10 @@ export type Database = {
           spot_id: string;
           author_id: string;
           menu_text: string;
+          // Attached photos: [{ path: storage object path, url: public URL }].
+          // Optional in the type so older rows / test fixtures omit it; callers
+          // treat a missing value as an empty list.
+          images?: { path: string; url: string }[];
           created_at: string;
           updated_at: string;
         };
@@ -211,6 +215,7 @@ export type Database = {
           spot_id: string;
           author_id: string;
           menu_text: string;
+          images?: { path: string; url: string }[];
           created_at?: string;
           updated_at?: string;
         };
@@ -219,6 +224,7 @@ export type Database = {
           spot_id?: string;
           author_id?: string;
           menu_text?: string;
+          images?: { path: string; url: string }[];
           created_at?: string;
           updated_at?: string;
         };

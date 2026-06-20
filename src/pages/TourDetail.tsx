@@ -19,7 +19,15 @@ import {
   reorderSpots,
   updateSpot,
 } from '../features/map/api';
-import { addSpotMenu, deleteSpotMenu } from '../features/menu/api';
+import {
+  addSpotMenu,
+  deleteSpotMenu,
+  removeImageObjects,
+  updateMenuImages,
+  uploadMenuImage,
+  type MenuImage,
+  type SpotMenuWithAuthor,
+} from '../features/menu/api';
 import { useStamps } from '../features/stamp/useStamps';
 import { usePendingCheckIns } from '../features/stamp/usePendingCheckIns';
 import { useGeoStamp } from '../features/stamp/useGeoStamp';
@@ -377,13 +385,66 @@ export default function TourDetail() {
     }
   }
 
-  // Add a signature menu to a spot from the inline editor (REQ-F4-001), then
-  // refresh so the editor's menu list reflects it immediately.
-  async function handleAddMenuToSpot(spotId: string, menuText: string) {
+  // Upload photos for a menu and return their { path, url } descriptors.
+  async function uploadFilesForMenu(
+    menuId: string,
+    files: File[],
+  ): Promise<MenuImage[]> {
+    if (!tourId || files.length === 0) return [];
+    const uploaded: MenuImage[] = [];
+    for (const file of files) {
+      uploaded.push(await uploadMenuImage(file, { tourId, menuId }));
+    }
+    return uploaded;
+  }
+
+  // Add a signature menu to a spot from the inline editor (REQ-F4-001), with any
+  // attached photos, then refresh so the editor reflects it immediately.
+  async function handleAddMenuToSpot(
+    spotId: string,
+    menuText: string,
+    files: File[] = [],
+  ) {
     if (!user) return;
     setActionError(null);
     try {
-      await addSpotMenu({ spotId, authorId: user.id, menuText });
+      const menu = await addSpotMenu({ spotId, authorId: user.id, menuText });
+      const uploaded = await uploadFilesForMenu(menu.id, files);
+      if (uploaded.length > 0) await updateMenuImages(menu.id, uploaded);
+      reloadSpots();
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
+  }
+
+  // Attach more photos to an existing menu (REQ-F4 images).
+  async function handleAddImagesToMenu(
+    menu: SpotMenuWithAuthor,
+    files: File[],
+  ) {
+    setActionError(null);
+    try {
+      const uploaded = await uploadFilesForMenu(menu.id, files);
+      if (uploaded.length > 0) {
+        await updateMenuImages(menu.id, [...(menu.images ?? []), ...uploaded]);
+        reloadSpots();
+      }
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
+  }
+
+  // Detach one photo from a menu: drop it from images, then best-effort delete
+  // the underlying storage object.
+  async function handleRemoveMenuImage(
+    menu: SpotMenuWithAuthor,
+    image: MenuImage,
+  ) {
+    setActionError(null);
+    try {
+      const next = (menu.images ?? []).filter((i) => i.path !== image.path);
+      await updateMenuImages(menu.id, next);
+      await removeImageObjects([image.path]);
       reloadSpots();
     } catch (err) {
       setActionError(errorMessage(err));
@@ -638,8 +699,12 @@ export default function TourDetail() {
                 kinds={spotKinds}
                 onAddKind={addSpotKindOption}
                 menus={menusBySpot[s.id] ?? []}
-                onAddMenu={(text) => handleAddMenuToSpot(s.id, text)}
+                onAddMenu={(text, files) =>
+                  handleAddMenuToSpot(s.id, text, files)
+                }
                 onDeleteMenu={handleDeleteMenu}
+                onAddImagesToMenu={handleAddImagesToMenu}
+                onRemoveImage={handleRemoveMenuImage}
                 currentUserId={user?.id}
                 isOwner={isOwner}
                 onSubmit={handleEditSpot}

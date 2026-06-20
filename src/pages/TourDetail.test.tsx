@@ -46,9 +46,15 @@ vi.mock('../features/map/api', () => ({
   reorderSpots: (...a: unknown[]) => reorderSpots(...a),
 }));
 
+const uploadMenuImage = vi.fn();
+const updateMenuImages = vi.fn();
+const removeImageObjects = vi.fn();
 vi.mock('../features/menu/api', () => ({
   addSpotMenu: (...a: unknown[]) => addSpotMenu(...a),
   deleteSpotMenu: (...a: unknown[]) => deleteSpotMenu(...a),
+  uploadMenuImage: (...a: unknown[]) => uploadMenuImage(...a),
+  updateMenuImages: (...a: unknown[]) => updateMenuImages(...a),
+  removeImageObjects: (...a: unknown[]) => removeImageObjects(...a),
 }));
 
 // SpotForm now opens the interactive LocationPicker (Kakao map) to choose a
@@ -583,6 +589,77 @@ describe('TourDetail Slice B spot management (REQ-F1-001, F3, F4, F5-007)', () =
       within(editor).getByRole('button', { name: '메뉴 삭제: 소금빵' }),
     );
     await waitFor(() => expect(deleteSpotMenu).toHaveBeenCalledWith('mn1'));
+  });
+
+  it('attaches a photo when adding a signature menu (REQ-F4 images)', async () => {
+    getMyRole.mockResolvedValue('owner');
+    // A menu that already has a photo, to verify the thumbnail renders.
+    useSpots.mockReturnValue({
+      spots: sampleSpots,
+      menusBySpot: {
+        s1: [
+          {
+            id: 'mn1',
+            spot_id: 's1',
+            author_id: 'u1',
+            menu_text: '소금빵',
+            author: { display_name: 'Alice' },
+            images: [{ path: 't1/mn1/a.png', url: 'https://cdn.test/a.png' }],
+          },
+        ],
+      },
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+    addSpotMenu.mockResolvedValue({ id: 'mn2' });
+    uploadMenuImage.mockResolvedValue({
+      path: 't1/mn2/b.png',
+      url: 'https://cdn.test/b.png',
+    });
+    updateMenuImages.mockResolvedValue(undefined);
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+
+    await userEvent.click(
+      screen.getByRole('button', { name: '장소 편집: 성수 베이커리' }),
+    );
+    const editor = await screen.findByTestId('spot-row-editor');
+    // Existing photo renders as a thumbnail.
+    expect(
+      within(editor).getByRole('img', { name: '소금빵' }),
+    ).toHaveAttribute('src', 'https://cdn.test/a.png');
+
+    // Attach a photo to a brand-new menu, then add it.
+    const file = new File([new Uint8Array([1, 2, 3])], 'b.png', {
+      type: 'image/png',
+    });
+    await userEvent.upload(within(editor).getByTestId('add-menu-files'), file);
+    await userEvent.type(
+      within(editor).getByTestId('add-menu-input'),
+      '크림빵',
+    );
+    await userEvent.click(within(editor).getByTestId('add-menu'));
+
+    // Menu created, the photo uploaded, then linked onto the new menu.
+    await waitFor(() =>
+      expect(addSpotMenu).toHaveBeenCalledWith({
+        spotId: 's1',
+        authorId: 'u1',
+        menuText: '크림빵',
+      }),
+    );
+    await waitFor(() =>
+      expect(uploadMenuImage).toHaveBeenCalledWith(file, {
+        tourId: 't1',
+        menuId: 'mn2',
+      }),
+    );
+    await waitFor(() =>
+      expect(updateMenuImages).toHaveBeenCalledWith('mn2', [
+        { path: 't1/mn2/b.png', url: 'https://cdn.test/b.png' },
+      ]),
+    );
   });
 
   it('reorder via the spot list calls reorder_spots RPC (AC-F5-06)', async () => {
