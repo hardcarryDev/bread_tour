@@ -8,6 +8,8 @@
 // fallback (NFR-GEO-002 / REQ-F1-007). It holds no geolocation state itself;
 // all of that lives in useGeoStamp so this stays trivially testable.
 
+import SectionTitle from '../../components/SectionTitle';
+
 interface StampTrackerProps {
   tracking: boolean;
   accuracyWarning: boolean;
@@ -29,27 +31,32 @@ export default function StampTracker({
 }: StampTrackerProps) {
   return (
     <div className="stamp-tracker" aria-label="위치 추적">
-      <p className="muted stamp-purpose">{purpose}</p>
+      {/* Heading + start/stop control share one row (title left, control right). */}
+      <div className="stamp-tracker-head">
+        <SectionTitle icon="stamps">스탬프</SectionTitle>
 
-      {tracking ? (
-        <div className="tracking-active">
-          {/* Persistent indicator while watchPosition is active (NFR-GEO-004). */}
-          <span
-            className="tracking-indicator"
-            data-testid="tracking-indicator"
-            role="status"
-          >
-            위치 추적 중
-          </span>
-          <button type="button" className="link-button" onClick={onPause}>
-            위치 추적 중지
+        {tracking ? (
+          <div className="tracking-active">
+            {/* Persistent indicator while watchPosition is active (NFR-GEO-004). */}
+            <span
+              className="tracking-indicator"
+              data-testid="tracking-indicator"
+              role="status"
+            >
+              위치 추적 중
+            </span>
+            <button type="button" className="link-button" onClick={onPause}>
+              위치 추적 중지
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={onStart}>
+            위치 추적 시작
           </button>
-        </div>
-      ) : (
-        <button type="button" onClick={onStart}>
-          위치 추적 시작
-        </button>
-      )}
+        )}
+      </div>
+
+      <p className="muted stamp-purpose">{purpose}</p>
 
       {accuracyWarning && (
         <p className="form-warning" role="alert">

@@ -907,6 +907,19 @@ button.menu-thumb {
   margin-bottom: 1rem;
 }
 
+/* Section title on the left, start/stop control on the right (one row). */
+.stamp-tracker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stamp-tracker .stamp-purpose {
+  margin: 0.5rem 0 0;
+}
+
 .stamp-panel > p {
   margin: 0.25rem 0 0.75rem;
 }
@@ -919,6 +932,12 @@ button.menu-thumb {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  /* Show ~5 rows by default; scroll for the rest. padding-right keeps the
+     scrollbar off the row borders. */
+  max-height: 18rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  overscroll-behavior: contain;
 }
 
 /* Each row is a soft card; name fills the middle, badge pushed to the right. */

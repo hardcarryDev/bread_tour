@@ -899,7 +899,6 @@ export default function TourDetail() {
 
       {/* GPS auto-stamp control + progress (F1 / NFR-GEO). */}
       <section className="stamp-panel" aria-label="스탬프">
-        <SectionTitle icon="stamps">스탬프</SectionTitle>
         <StampTracker
           tracking={geo.tracking}
           accuracyWarning={geo.accuracyWarning}
