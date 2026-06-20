@@ -55,6 +55,7 @@ import OfflineIndicator from '../features/collab/OfflineIndicator';
 import ToastHost from '../features/collab/ToastHost';
 import { useProfiles } from '../features/profile/useProfiles';
 import AppNav from '../features/profile/AppNav';
+import SectionTitle from '../components/SectionTitle';
 import type { Spot } from '../types/database';
 import { errorMessage } from '../lib/errors';
 
@@ -701,7 +702,7 @@ export default function TourDetail() {
         aria-label="장소 목록"
       >
         <div className="section-head">
-          <h2>장소</h2>
+          <SectionTitle icon="spots">장소</SectionTitle>
           <div className="spots-panel-actions">
             {/* "순서": enter multi-select + drag-and-drop reorder mode (AC-F5-06).
                 Needs at least two spots to be meaningful. */}
@@ -898,7 +899,7 @@ export default function TourDetail() {
 
       {/* GPS auto-stamp control + progress (F1 / NFR-GEO). */}
       <section className="stamp-panel" aria-label="스탬프">
-        <h2>스탬프</h2>
+        <SectionTitle icon="stamps">스탬프</SectionTitle>
         <StampTracker
           tracking={geo.tracking}
           accuracyWarning={geo.accuracyWarning}

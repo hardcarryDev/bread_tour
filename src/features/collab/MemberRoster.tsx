@@ -18,6 +18,7 @@
 import { useRef, useState } from 'react';
 import type { TourMember } from '../../types/database';
 import { displayNameFor, type DisplayNameMap } from '../profile/api';
+import SectionTitle from '../../components/SectionTitle';
 
 // Hold duration before a press counts as a long-press (ms). 500ms matches the
 // common mobile long-press threshold without feeling sluggish.
@@ -75,9 +76,9 @@ export default function MemberRoster({
   return (
     <section className="members" aria-label="멤버">
       <div className="section-head">
-        <h2>
+        <SectionTitle icon="members">
           멤버 <span className="muted">{members.length}</span>
-        </h2>
+        </SectionTitle>
         <div className="members-head-actions">
           <span className="online-badge">
             접속 중{' '}

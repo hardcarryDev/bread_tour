@@ -22,6 +22,18 @@
   font-size: 1.2rem;
 }
 
+/* Section heading with a small leading icon (멤버 / 장소 / 스탬프). */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.section-title-icon {
+  flex: 0 0 auto;
+  color: #b5651d;
+}
+
 .page-header,
 .section-head {
   display: flex;
@@ -890,6 +902,11 @@ button.menu-thumb {
 
 /* --- Stamp progress list (스탬프) --------------------------------------- */
 /* Tidy spacing for the section so the heading/description/tracker/list flow. */
+/* Space the tracker (위치 추적 시작 button + status) off the progress list below. */
+.stamp-tracker {
+  margin-bottom: 1rem;
+}
+
 .stamp-panel > p {
   margin: 0.25rem 0 0.75rem;
 }
