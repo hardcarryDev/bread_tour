@@ -198,7 +198,9 @@ export default function SpotList({
                 <ul className="spot-menus-list">
                   {menusBySpot[spot.id]!.map((m) => (
                     <li key={m.id}>
-                      <span className="spot-menu-text">{m.menu_text}</span>
+                      <span className="spot-menu-text">
+                        {m.menu_text || '(사진)'}
+                      </span>
                       <span className="muted">
                         {' '}
                         — {m.author?.display_name ?? m.author_id}

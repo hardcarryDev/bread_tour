@@ -63,17 +63,15 @@ export async function listSpotMenusForTour(
 }
 
 // Add a recommended menu for a spot, attributed to the author (REQ-F4-001).
-// A blank menu is rejected here -- "no menu" is the absence of a row, not a
-// stored empty string (REQ-F4-004).
+// The name may be empty when the menu is photo-only (the photo IS the menu);
+// callers that add from the spot form guard against a truly-empty (no text AND
+// no photo) entry, so we no longer reject empty text here.
 export async function addSpotMenu(params: {
   spotId: string;
   authorId: string;
   menuText: string;
 }): Promise<SpotMenu> {
   const text = params.menuText.trim();
-  if (text.length === 0) {
-    throw new Error('Cannot add an empty menu');
-  }
   const { data, error } = await supabase
     .from('spot_menus')
     .insert({

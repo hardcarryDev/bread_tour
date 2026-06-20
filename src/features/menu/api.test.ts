@@ -139,12 +139,22 @@ describe('addSpotMenu (REQ-F4-001 / AC-F4-01)', () => {
     expect(result).toEqual(created);
   });
 
-  it('rejects an empty menu text (empty handled at registration, not stored as blank)', async () => {
-    await expect(
-      addSpotMenu({ spotId: 's1', authorId: 'u1', menuText: '   ' }),
-    ).rejects.toThrow(/empty/i);
-    // No insert should be attempted for a blank menu.
-    expect(mockedFrom).not.toHaveBeenCalled();
+  it('allows an empty name for a photo-only menu (the photo is the menu)', async () => {
+    const created = { id: 'm9', spot_id: 's1', author_id: 'u1', menu_text: '' };
+    const b = builder({ data: created, error: null });
+    mockedFrom.mockReturnValue(b);
+    const result = await addSpotMenu({
+      spotId: 's1',
+      authorId: 'u1',
+      menuText: '   ',
+    });
+    // Whitespace is trimmed to '' and the row is inserted (photo-only menu).
+    expect(b.insert).toHaveBeenCalledWith({
+      spot_id: 's1',
+      author_id: 'u1',
+      menu_text: '',
+    });
+    expect(result).toEqual(created);
   });
 });
 

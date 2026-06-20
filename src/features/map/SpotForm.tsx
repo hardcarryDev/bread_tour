@@ -312,7 +312,9 @@ export default function SpotForm({
                 return (
                   <li key={m.id}>
                     <div className="spot-menu-row">
-                      <span className="spot-menu-text">{m.menu_text}</span>
+                      <span className="spot-menu-text">
+                        {m.menu_text || '(사진)'}
+                      </span>
                       <span className="muted">
                         {' '}
                         — {m.author?.display_name ?? m.author_id}
@@ -321,7 +323,7 @@ export default function SpotForm({
                         <button
                           type="button"
                           className="menu-delete"
-                          aria-label={`메뉴 삭제: ${m.menu_text}`}
+                          aria-label={`메뉴 삭제: ${m.menu_text || '사진 메뉴'}`}
                           title="삭제"
                           onClick={() => void handleDeleteMenu(m.id)}
                         >
