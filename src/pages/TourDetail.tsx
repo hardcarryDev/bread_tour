@@ -376,19 +376,12 @@ export default function TourDetail() {
     const ordered = [...spots].sort((a, b) => a.order_index - b.order_index);
     if (ordered.length < 2) return;
 
-    // 직선: straight connectors between adjacent spots, no routing API call.
+    // 직선: the straight connector is the map's always-on order connector
+    // (MapView showOrderConnector), so we draw no routeLegs here — doing so
+    // would double up the straight line. Just mark the mode as shown.
     if (mode === 'straight') {
-      const legPaths: LatLng[][] = [];
-      for (let i = 0; i < ordered.length - 1; i++) {
-        const a = ordered[i];
-        const b = ordered[i + 1];
-        legPaths.push([
-          { lat: a.lat, lng: a.lng },
-          { lat: b.lat, lng: b.lng },
-        ]);
-      }
       setActionError(null);
-      setRouteLegs(legPaths);
+      setRouteLegs(undefined);
       setRouteModeShown('straight');
       return;
     }
@@ -782,6 +775,12 @@ export default function TourDetail() {
               stampBySpot={stampBySpot}
               routePath={routePath}
               routeLegs={routeLegs}
+              // Hide the always-on straight order connector while a road route
+              // (차/도보) is shown so the straight line is not drawn over the
+              // road geometry. null (default) and 직선 keep it visible.
+              showOrderConnector={
+                routeModeShown !== 'car' && routeModeShown !== 'walk'
+              }
               // Live "내 위치" marker while GPS tracking is active. This is the
               // same in-memory fix used for directions (NFR-GEO-006: never
               // persisted); it appears while tracking and clears to null on stop.

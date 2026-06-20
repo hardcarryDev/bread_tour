@@ -197,6 +197,21 @@ describe('MapView markers and ordering (REQ-F3-001/002 / AC-F3-01)', () => {
     await waitFor(() => expect(created.polylinePaths.length).toBe(2));
     expect(created.polylinePaths.every((p) => p.length === 2)).toBe(true);
   });
+
+  it('draws the order connector by default (showOrderConnector implied true)', async () => {
+    render(<MapView spots={spots} />);
+    // 2-point connector segments are present for the 3-spot order.
+    await waitFor(() =>
+      expect(created.polylines.some((p) => p.path.length === 2)).toBe(true),
+    );
+  });
+
+  it('does not draw the order connector when showOrderConnector is false', async () => {
+    render(<MapView spots={spots} showOrderConnector={false} />);
+    // Markers still render, but no straight order-connector polylines are drawn.
+    await waitFor(() => expect(created.markers.length).toBe(3));
+    expect(created.polylines.length).toBe(0);
+  });
 });
 
 describe('MapView reorder redraw (REQ-F3-003 / AC-F3-02)', () => {

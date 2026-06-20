@@ -31,6 +31,11 @@ interface MapViewProps {
   // it and does not store it. It is intentionally NOT part of the spot-order
   // polyline or setBounds so spot framing is unaffected.
   currentLocation?: { lat: number; lng: number; accuracy?: number } | null;
+  // Whether to draw the straight spot-order connector (the "기본 직선" line
+  // between spots in visit order). Default true. Set false when a road route
+  // (차/도보) is shown so the straight line does not sit on top of the road
+  // geometry. true => connector visible (default / 직선); false => hidden.
+  showOrderConnector?: boolean;
 }
 
 // @MX:ANCHOR: [AUTO] MapView is the single Kakao rendering surface for the tour
@@ -48,6 +53,7 @@ export default function MapView({
   routePath,
   routeLegs,
   currentLocation,
+  showOrderConnector = true,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<KakaoMap | null>(null);
@@ -61,6 +67,10 @@ export default function MapView({
   // Per-segment colored whole-tour route legs (getPathRoute). Tracked in their
   // own ref so they replace/clear independently of the blue point-to-point route.
   const routeLegLinesRef = useRef<{ setMap(map: KakaoMap | null): void }[]>([]);
+  // Straight spot-order connector polylines (the "기본 직선"). Tracked in their
+  // own ref so they draw/clear independently of the markers and the road routes,
+  // gated by the showOrderConnector prop.
+  const orderLineRef = useRef<{ setMap(map: KakaoMap | null): void }[]>([]);
   // "내 위치" overlays (blue dot + optional accuracy circle) are tracked in their
   // own refs so they update/clear independently of the spot markers and route.
   const meDotRef = useRef<KakaoCircle | null>(null);
@@ -130,20 +140,8 @@ export default function MapView({
       drawnRef.current.push(overlay);
     });
 
-    // Draw each visit-order segment (spot i -> i+1) as its OWN polyline in a
-    // distinct color (segmentColor) so overlapping legs are easy to tell apart
-    // instead of one indistinguishable orange line. The colors match the
-    // spot-list row connectors.
-    for (let i = 0; i < path.length - 1; i++) {
-      const segment = new kakao.maps.Polyline({
-        path: [path[i], path[i + 1]],
-        strokeWeight: 5,
-        strokeColor: segmentColor(i),
-        strokeOpacity: 0.9,
-      });
-      segment.setMap(map);
-      drawnRef.current.push(segment);
-    }
+    // The straight spot-order connector is drawn in its own effect (gated by
+    // showOrderConnector) so it can be hidden when a road route is shown.
 
     // Fit the viewport to all spots.
     if (path.length > 0) {
@@ -152,6 +150,38 @@ export default function MapView({
       map.setBounds(bounds);
     }
   }, [ready, spots]);
+
+  // Draw / clear the straight spot-order connector (the "기본 직선"). Each
+  // visit-order segment (spot i -> i+1) is its OWN polyline in a distinct color
+  // (segmentColor) so overlapping legs are easy to tell apart instead of one
+  // indistinguishable line; the colors match the spot-list row connectors. Kept
+  // in its own effect/ref so it can be hidden (showOrderConnector=false) when a
+  // road route (차/도보) is shown without disturbing the markers or viewport.
+  useEffect(() => {
+    if (!ready || !kakaoRef.current || !mapRef.current) return;
+    const kakao = kakaoRef.current;
+    const map = mapRef.current;
+
+    for (const obj of orderLineRef.current) obj.setMap(null);
+    orderLineRef.current = [];
+
+    if (!showOrderConnector) return;
+
+    const ordered = [...spots].sort((a, b) => a.order_index - b.order_index);
+    for (let i = 0; i < ordered.length - 1; i++) {
+      const segment = new kakao.maps.Polyline({
+        path: [
+          new kakao.maps.LatLng(ordered[i].lat, ordered[i].lng),
+          new kakao.maps.LatLng(ordered[i + 1].lat, ordered[i + 1].lng),
+        ],
+        strokeWeight: 5,
+        strokeColor: segmentColor(i),
+        strokeOpacity: 0.9,
+      });
+      segment.setMap(map);
+      orderLineRef.current.push(segment);
+    }
+  }, [ready, spots, showOrderConnector]);
 
   // Draw / replace / clear the real road route polyline (REQ-F2-001). Kept in a
   // separate effect (and ref) from the spot-order line so requesting a new route
