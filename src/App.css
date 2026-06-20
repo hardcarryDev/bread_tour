@@ -581,13 +581,11 @@ button.menu-thumb {
   color: #fff;
 }
 
-/* Map + whole-tour route control laid out as a row: map on the left (shrinks
-   to fill remaining width), the route control as a vertical button column on
-   the right. Compact enough to fit a ~360px mobile viewport. */
+/* Map + whole-tour route control: the map fills the full width and the route
+   control floats over its top-right corner like a native map zoom widget, so
+   no horizontal space is sacrificed even on a ~360px viewport. */
 .map-with-route {
-  display: flex;
-  gap: 0;
-  align-items: stretch;
+  position: relative;
   margin-top: 1rem;
 }
 
@@ -597,17 +595,22 @@ button.menu-thumb {
   margin-top: 0;
 }
 
+/* Floating route-mode card overlaid on the map's top-right corner. A small
+   rounded white card with a soft drop shadow, sitting above the tiles. */
 .route-mode-control--side {
-  flex: 0 0 auto;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
   flex-direction: column;
-  width: 2.5rem;
+  gap: 0;
   margin: 0;
-  align-self: flex-start;
-  /* Flush against the map: flatten the corners touching the map and drop the
-     shared border so the strip reads as attached, freeing horizontal space. */
-  border-left: none;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  width: auto;
+  border: 1px solid rgba(60, 40, 15, 0.12);
+  border-radius: 0.6rem;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(60, 40, 15, 0.18);
 }
 
 .route-mode-control--side .route-mode-btn {
@@ -615,21 +618,39 @@ button.menu-thumb {
   width: 100%;
 }
 
+/* 1px light divider between stacked buttons (replaces the side-by-side rule). */
 .route-mode-control--side .route-mode-btn + .route-mode-btn {
   border-left: none;
   border-top: 1px solid #e0d5c5;
 }
 
-/* Icon-only mode buttons: center the glyph, no text padding, dim while busy. */
+/* Icon-only mode buttons: ~40px square tap target, centered glyph, dim while
+   busy, with gentle hover/press feedback. */
 .route-mode-btn--icon {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   padding: 0;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .route-mode-btn--icon svg {
   display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.route-mode-control--side .route-mode-btn--icon:not([aria-pressed='true']):hover {
+  background: #faf2e6;
+}
+
+.route-mode-control--side .route-mode-btn--icon:active {
+  background: #efe3d2;
 }
 
 .route-mode-btn[aria-busy='true'] {
@@ -642,35 +663,53 @@ button.menu-thumb {
   opacity: 0.7;
 }
 
-/* Directions travel-mode tabs (도보/대중교통/차) — KakaoMap-style segmented
-   control. Mobile-first: full-width row, equal large touch targets (NFR-RESP). */
+/* Directions panel: a soft cream card grouping the controls, mode tabs and
+   route summary together, separated from the map above. */
+.directions-panel {
+  margin-top: 0.75rem;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: #faf6ef;
+  border: 1px solid #ecdcc4;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 4px rgba(60, 40, 15, 0.08);
+}
+
+/* Directions travel-mode tabs (도보/대중교통/차) — modern segmented control:
+   an inset cream track with a sliding brown pill for the active mode.
+   Mobile-first: full-width row, equal large touch targets (NFR-RESP). */
 .mode-tabs {
   display: flex;
-  gap: 0;
+  gap: 0.2rem;
   width: 100%;
-  border: 1px solid #d8c6a8;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  margin-bottom: 0.75rem;
+  padding: 0.2rem;
+  background: #efe3d2;
+  border-radius: 0.6rem;
 }
 
 .mode-tab {
   flex: 1 1 0;
   min-height: 44px; /* touch target (NFR-RESP-002) */
   border: none;
-  border-radius: 0;
-  background: #fff;
+  border-radius: 0.45rem;
+  background: transparent;
   color: #6b4a1f;
   font-weight: 600;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
-.mode-tab + .mode-tab {
-  border-left: 1px solid #e0d5c5;
+.mode-tab:not([aria-pressed='true']):hover {
+  background: rgba(181, 101, 29, 0.12);
 }
 
 .mode-tab[aria-pressed='true'] {
   background: #b5651d;
   color: #fff;
+  box-shadow: 0 1px 3px rgba(60, 40, 15, 0.25);
 }
 
 /* Transit itinerary breakdown — compact, wraps safely at 360px (NFR-RESP). */
@@ -703,11 +742,12 @@ button.menu-thumb {
 .directions-controls {
   display: flex;
   align-items: stretch;
+  flex-wrap: wrap;
   gap: 0.6rem;
 }
 
 .directions-fields {
-  flex: 1 1 auto;
+  flex: 1 1 12rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -733,17 +773,64 @@ button.menu-thumb {
   min-height: 44px;
   padding: 0.5rem 0.6rem;
   font-size: 1rem;
-  border: 1px solid #d8c6a8;
+  border: 1px solid #dccbb0;
   border-radius: 0.5rem;
   background: #fff;
   color: inherit;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
-/* 길찾기 spans the height of both select rows, to the right of the fields. */
+.directions-field select:focus-visible {
+  outline: 2px solid #b5651d;
+  outline-offset: 1px;
+  border-color: #b5651d;
+}
+
+/* 길찾기: a confident primary button spanning both select rows for a balanced
+   block. Wraps full-width below the fields on very narrow (~360px) screens. */
 .directions-go {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   align-self: stretch;
   white-space: nowrap;
+  padding: 0.6rem 1.2rem;
+  font-weight: 700;
+  background: #b5651d;
+  color: #fff;
+  border-radius: 0.6rem;
+  box-shadow: 0 1px 3px rgba(60, 40, 15, 0.2);
+  transition:
+    background 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.directions-go:not(:disabled):hover {
+  background: #a4561a;
+}
+
+.directions-go:not(:disabled):active {
+  background: #8f4c16;
+  box-shadow: 0 1px 2px rgba(60, 40, 15, 0.25);
+}
+
+.directions-go:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+/* Route summary block sits below the tabs inside the card: stack its spans so
+   the mode/distance/duration captions read as clean lines. */
+.route-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  color: #6b4a1f;
+}
+
+.route-summary [data-testid='route-mode'] {
+  font-weight: 700;
 }
 
 /* --- Slice B: spots, map, reorder (NFR-RESP: 360px-safe, no h-scroll) --- */
