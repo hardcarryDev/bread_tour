@@ -359,6 +359,27 @@ button.danger {
   flex-wrap: wrap;
 }
 
+/* Inline rename of an existing menu name. */
+.spot-menu-edit {
+  width: 100%;
+}
+
+.spot-menu-edit input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.spot-menu-edit button {
+  flex: 0 0 auto;
+}
+
+/* "이름 수정" link sits before the ✕ delete; keep it compact. */
+.menu-edit {
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 .menu-thumbs {
   display: flex;
   flex-wrap: wrap;
@@ -383,6 +404,31 @@ button.danger {
   height: 100%;
   object-fit: cover;
   display: block;
+  cursor: zoom-in;
+}
+
+/* A thumbnail rendered as a <button> (opens the in-app viewer) must look
+   identical to the <span>/<a> thumbnails — reset native button chrome. */
+button.menu-thumb {
+  padding: 0;
+  background: none;
+  cursor: zoom-in;
+  font: inherit;
+  color: inherit;
+}
+
+/* Edit view: the image sits inside a <button> that fills the thumb tile so the
+   photo opens the viewer, while the separate ✕ overlay still deletes it. */
+.menu-thumb-open {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
 }
 
 /* ✕ overlay to detach a photo (edit mode). */
@@ -1117,4 +1163,90 @@ button.danger {
 .toast-dismiss {
   color: #90caf9;
   flex-shrink: 0;
+}
+
+/* Image viewer (lightbox) ------------------------------------------------
+   Full-screen in-app photo viewer (replaces "open image in new tab"), so menu
+   photos are viewable on mobile. Sits above all other overlays (z-index 1100).
+   Mobile-first: large tap targets (>= 44px), horizontal swipe to navigate. */
+.image-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.88);
+  touch-action: pan-y;
+}
+
+.image-viewer-img {
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.4rem;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+.image-viewer-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.image-viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.image-viewer-prev {
+  left: 0.75rem;
+}
+
+.image-viewer-next {
+  right: 0.75rem;
+}
+
+.image-viewer-counter {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.85rem;
 }

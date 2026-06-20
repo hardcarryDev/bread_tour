@@ -85,6 +85,20 @@ export async function addSpotMenu(params: {
   return data as SpotMenu;
 }
 
+// Rename an existing recommended menu (edit its menu_text, REQ-F4). RLS
+// (spot_menus_update, author/owner) is the real guard; a non-permitted attempt
+// surfaces as an error. Text is trimmed; empty is allowed for photo-only menus.
+export async function updateSpotMenuText(
+  menuId: string,
+  menuText: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('spot_menus')
+    .update({ menu_text: menuText.trim() })
+    .eq('id', menuId);
+  if (error) throw new Error(error.message);
+}
+
 // Delete a recommended menu by id (REQ-F4). RLS (spot_menus_delete) allows the
 // menu's author or the tour owner to delete; a non-permitted attempt surfaces as
 // an error here rather than silently succeeding.

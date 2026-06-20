@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { SpotKind } from '../../types/database';
 import { errorMessage } from '../../lib/errors';
 import type { MenuImage, SpotMenuWithAuthor } from '../menu/api';
+import ImageViewer, { type ViewerImage } from '../../components/ImageViewer';
 import LocationPicker, { type PickedLocation } from './LocationPicker';
 
 export interface SpotFormValues {
@@ -38,6 +39,8 @@ interface SpotFormProps {
   // Register a new menu. `files` are optional photos to attach to it (REQ-F4).
   onAddMenu?: (text: string, files: File[]) => Promise<void> | void;
   onDeleteMenu?: (menuId: string) => Promise<void> | void;
+  // Rename an existing menu's name (REQ-F4 edit).
+  onUpdateMenu?: (menuId: string, text: string) => Promise<void> | void;
   // Attach more photos to an existing menu / detach one (REQ-F4 images).
   onAddImagesToMenu?: (
     menu: SpotMenuWithAuthor,
@@ -66,6 +69,7 @@ export default function SpotForm({
   menus,
   onAddMenu,
   onDeleteMenu,
+  onUpdateMenu,
   onAddImagesToMenu,
   onRemoveImage,
   currentUserId,
@@ -86,6 +90,9 @@ export default function SpotForm({
   const [menuText, setMenuText] = useState('');
   // Edit-mode "add a signature menu" input (registers immediately via onAddMenu).
   const [addMenuText, setAddMenuText] = useState('');
+  // Inline rename of an existing menu: which menu is being edited + its draft text.
+  const [editingMenuId, setEditingMenuId] = useState<string | null>(null);
+  const [editingMenuText, setEditingMenuText] = useState('');
   // New-menu photo picker: uncontrolled file input read on "메뉴 추가".
   const newMenuFilesRef = useRef<HTMLInputElement | null>(null);
   // Count of files chosen for the new menu (drives a small "N장 선택됨" hint).
@@ -100,6 +107,12 @@ export default function SpotForm({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // In-app photo viewer state (null when closed). Tapping a thumbnail opens the
+  // viewer with that menu's full image list; the × delete control is separate.
+  const [viewer, setViewer] = useState<{
+    images: ViewerImage[];
+    index: number;
+  } | null>(null);
 
   // Apply a coordinate chosen in the interactive picker. If the picker returned
   // a place name and the name field is still empty, prefill it (optional, A8).
@@ -158,6 +171,22 @@ export default function SpotForm({
     }
   }
 
+  // Begin / save / cancel inline rename of an existing menu name.
+  function startEditMenu(menu: SpotMenuWithAuthor) {
+    setEditingMenuId(menu.id);
+    setEditingMenuText(menu.menu_text);
+  }
+
+  async function handleSaveMenuName(menuId: string) {
+    try {
+      await onUpdateMenu?.(menuId, editingMenuText);
+      setEditingMenuId(null);
+      setEditingMenuText('');
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
   // Attach more photos to an existing menu.
   async function handleAddImages(menu: SpotMenuWithAuthor, files: File[]) {
     if (files.length === 0) return;
@@ -208,6 +237,7 @@ export default function SpotForm({
   }
 
   return (
+    <>
     <form className="spot-form" onSubmit={handleSubmit}>
       <label>
         이름
@@ -312,37 +342,107 @@ export default function SpotForm({
                 const images = m.images ?? [];
                 return (
                   <li key={m.id}>
-                    <div className="spot-menu-row">
-                      <span className="spot-menu-text">{m.menu_text}</span>
-                      <span className="muted">
-                        {' '}
-                        — {m.author?.display_name ?? m.author_id}
-                      </span>
-                      {mine && (
+                    {editingMenuId === m.id ? (
+                      // Inline rename: input + 저장/취소 (REQ-F4 edit).
+                      <div className="spot-menu-row spot-menu-edit">
+                        <input
+                          type="text"
+                          value={editingMenuText}
+                          data-testid={`edit-menu-input-${m.id}`}
+                          onChange={(e) => setEditingMenuText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              void handleSaveMenuName(m.id);
+                            }
+                          }}
+                          aria-label={`메뉴 이름 수정: ${m.menu_text}`}
+                        />
                         <button
                           type="button"
-                          className="menu-delete"
-                          aria-label={`메뉴 삭제: ${m.menu_text}`}
-                          title="삭제"
-                          onClick={() => void handleDeleteMenu(m.id)}
+                          data-testid={`save-menu-${m.id}`}
+                          onClick={() => void handleSaveMenuName(m.id)}
                         >
-                          <span aria-hidden="true">×</span>
+                          저장
                         </button>
-                      )}
-                    </div>
+                        <button
+                          type="button"
+                          className="link-button"
+                          data-testid={`cancel-edit-menu-${m.id}`}
+                          onClick={() => {
+                            setEditingMenuId(null);
+                            setEditingMenuText('');
+                          }}
+                        >
+                          취소
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="spot-menu-row">
+                        <span className="spot-menu-text">{m.menu_text}</span>
+                        <span className="muted">
+                          {' '}
+                          — {m.author?.display_name ?? m.author_id}
+                        </span>
+                        {mine && onUpdateMenu && (
+                          <button
+                            type="button"
+                            className="link-button menu-edit"
+                            data-testid={`edit-menu-${m.id}`}
+                            onClick={() => startEditMenu(m)}
+                          >
+                            이름 수정
+                          </button>
+                        )}
+                        {mine && (
+                          <button
+                            type="button"
+                            className="menu-delete"
+                            aria-label={`메뉴 삭제: ${m.menu_text}`}
+                            title="삭제"
+                            onClick={() => void handleDeleteMenu(m.id)}
+                          >
+                            <span aria-hidden="true">×</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     {(images.length > 0 || mine) && (
                       <div className="menu-thumbs">
-                        {images.map((img) => (
+                        {images.map((img, imgIndex) => (
                           <span className="menu-thumb" key={img.path}>
-                            <img src={img.url} alt={m.menu_text} loading="lazy" />
+                            <button
+                              type="button"
+                              className="menu-thumb-open"
+                              aria-label={`사진 보기: ${m.menu_text || '메뉴'}`}
+                              onClick={() =>
+                                setViewer({
+                                  images: images.map((i) => ({
+                                    url: i.url,
+                                    alt: m.menu_text,
+                                  })),
+                                  index: imgIndex,
+                                })
+                              }
+                            >
+                              <img
+                                src={img.url}
+                                alt={m.menu_text}
+                                loading="lazy"
+                              />
+                            </button>
                             {mine && (
                               <button
                                 type="button"
                                 className="menu-thumb-remove"
                                 aria-label={`사진 삭제: ${m.menu_text}`}
                                 title="사진 삭제"
-                                onClick={() => void handleRemoveImage(m, img)}
+                                onClick={(e) => {
+                                  // Never open the viewer when deleting.
+                                  e.stopPropagation();
+                                  void handleRemoveImage(m, img);
+                                }}
                               >
                                 <span aria-hidden="true">×</span>
                               </button>
@@ -446,5 +546,16 @@ export default function SpotForm({
         </button>
       </div>
     </form>
+    {viewer && (
+      <ImageViewer
+        images={viewer.images}
+        index={viewer.index}
+        onClose={() => setViewer(null)}
+        onIndexChange={(next) =>
+          setViewer((v) => (v ? { ...v, index: next } : v))
+        }
+      />
+    )}
+    </>
   );
 }

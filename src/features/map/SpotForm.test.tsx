@@ -197,3 +197,53 @@ describe('SpotForm coordinate capture + menu fields (REQ-F1-001, REQ-F4-001 / AC
     );
   });
 });
+
+describe('SpotForm signature-menu rename (edit mode, REQ-F4)', () => {
+  const menus = [
+    {
+      id: 'mn1',
+      spot_id: 's1',
+      author_id: 'u1',
+      menu_text: '소금빵',
+      images: [],
+      author: { display_name: 'Alice' },
+    },
+  ] as never;
+
+  function renderEdit(onUpdateMenu = vi.fn().mockResolvedValue(undefined)) {
+    render(
+      <SpotForm
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        initial={{ name: '김카페', lat: 37.5, lng: 127, kind: '카페' }}
+        menus={menus}
+        onAddMenu={vi.fn().mockResolvedValue(undefined)}
+        onDeleteMenu={vi.fn()}
+        onUpdateMenu={onUpdateMenu}
+        currentUserId="u1"
+      />,
+    );
+    return onUpdateMenu;
+  }
+
+  it('renames an existing menu via the 이름 수정 / 저장 flow', async () => {
+    const onUpdateMenu = renderEdit();
+    await userEvent.click(screen.getByTestId('edit-menu-mn1'));
+    const input = screen.getByTestId('edit-menu-input-mn1');
+    expect(input).toHaveValue('소금빵'); // prefilled with the current name
+    await userEvent.clear(input);
+    await userEvent.type(input, '우유식빵');
+    await userEvent.click(screen.getByTestId('save-menu-mn1'));
+    expect(onUpdateMenu).toHaveBeenCalledWith('mn1', '우유식빵');
+  });
+
+  it('does not call onUpdateMenu when the rename is cancelled', async () => {
+    const onUpdateMenu = renderEdit();
+    await userEvent.click(screen.getByTestId('edit-menu-mn1'));
+    await userEvent.type(screen.getByTestId('edit-menu-input-mn1'), 'x');
+    await userEvent.click(screen.getByTestId('cancel-edit-menu-mn1'));
+    expect(onUpdateMenu).not.toHaveBeenCalled();
+    // Back to read view.
+    expect(screen.queryByTestId('edit-menu-input-mn1')).not.toBeInTheDocument();
+  });
+});

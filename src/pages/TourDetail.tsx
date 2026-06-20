@@ -22,6 +22,7 @@ import {
 import {
   addSpotMenu,
   deleteSpotMenu,
+  updateSpotMenuText,
   removeImageObjects,
   updateMenuImages,
   uploadMenuImage,
@@ -466,6 +467,16 @@ export default function TourDetail() {
     }
   }
 
+  async function handleUpdateMenu(menuId: string, text: string) {
+    setActionError(null);
+    try {
+      await updateSpotMenuText(menuId, text);
+      reloadSpots();
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
+  }
+
   // Resolve the user's current location for the local sort. Prefer the live
   // in-memory GPS fix (NFR-GEO-006: never persisted); if tracking is off, take a
   // ONE-SHOT navigator.geolocation fix (also in-memory only — never stored).
@@ -706,6 +717,7 @@ export default function TourDetail() {
                   handleAddMenuToSpot(s.id, text, files)
                 }
                 onDeleteMenu={handleDeleteMenu}
+                onUpdateMenu={handleUpdateMenu}
                 onAddImagesToMenu={handleAddImagesToMenu}
                 onRemoveImage={handleRemoveMenuImage}
                 currentUserId={user?.id}

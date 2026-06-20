@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Spot } from '../../types/database';
 import type { SpotMenuWithAuthor } from '../menu/api';
+import ImageViewer, { type ViewerImage } from '../../components/ImageViewer';
 import { segmentColor } from './spotColors';
 import {
   formatDistance,
@@ -71,6 +72,14 @@ export default function SpotList({
   distanceBySpot,
   menusBySpot = {},
 }: SpotListProps) {
+  // In-app photo viewer state: the image set being viewed + the active index.
+  // null when closed. Opening a menu's thumbnail loads that menu's full image
+  // list so the user can swipe through all of its photos.
+  const [viewer, setViewer] = useState<{
+    images: ViewerImage[];
+    index: number;
+  } | null>(null);
+
   // The shared plan order — the up/down arrows always reorder against THIS.
   const planOrdered = [...spots].sort((a, b) => a.order_index - b.order_index);
 
@@ -104,6 +113,7 @@ export default function SpotList({
   }
 
   return (
+    <>
     <ul className="spot-list">
       {sorted.map((spot, index) => {
         // The arrows act on the plan order, so derive each spot's plan index for
@@ -207,20 +217,28 @@ export default function SpotList({
                       </span>
                       {(m.images?.length ?? 0) > 0 && (
                         <div className="menu-thumbs">
-                          {m.images!.map((img) => (
-                            <a
+                          {m.images!.map((img, imgIndex) => (
+                            <button
+                              type="button"
                               key={img.path}
                               className="menu-thumb"
-                              href={img.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              aria-label={`사진 보기: ${m.menu_text || '메뉴'}`}
+                              onClick={() =>
+                                setViewer({
+                                  images: m.images!.map((i) => ({
+                                    url: i.url,
+                                    alt: m.menu_text,
+                                  })),
+                                  index: imgIndex,
+                                })
+                              }
                             >
                               <img
                                 src={img.url}
                                 alt={m.menu_text}
                                 loading="lazy"
                               />
-                            </a>
+                            </button>
                           ))}
                         </div>
                       )}
@@ -245,5 +263,16 @@ export default function SpotList({
         );
       })}
     </ul>
+    {viewer && (
+      <ImageViewer
+        images={viewer.images}
+        index={viewer.index}
+        onClose={() => setViewer(null)}
+        onIndexChange={(next) =>
+          setViewer((v) => (v ? { ...v, index: next } : v))
+        }
+      />
+    )}
+    </>
   );
 }
