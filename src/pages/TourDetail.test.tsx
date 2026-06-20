@@ -668,29 +668,6 @@ describe('TourDetail manual check-in fallback (REQ-F1-007 / AC-F1-04)', () => {
 });
 
 describe('TourDetail directions wiring (C-01 / REQ-F2-003)', () => {
-  it('passes the in-memory GPS position to DirectionsPanel as currentLocation', async () => {
-    getMyRole.mockResolvedValue('member');
-    // The GPS hook reports an in-memory position (never persisted). TourDetail
-    // must forward it to DirectionsPanel so "다음 장소로 안내" is not permanently
-    // disabled (the C-01 defect was a hard-coded currentLocation={null}).
-    useGeoStamp.mockReturnValue({
-      tracking: true,
-      accuracyWarning: false,
-      permissionDenied: false,
-      error: null,
-      purpose: '도착 시 자동으로 스탬프를 적립하기 위해 위치 정보를 사용합니다.',
-      currentPosition: { lat: 37.49, lng: 127.01 },
-      start: vi.fn(),
-      pause: vi.fn(),
-      stop: vi.fn(),
-    });
-    renderDetail();
-    await screen.findByTestId('spots-panel');
-    expect(screen.getByTestId('directions-panel')).toHaveTextContent(
-      'loc:{"lat":37.49,"lng":127.01}',
-    );
-  });
-
   it('passes the in-memory GPS position to MapView as currentLocation (내 위치 marker)', async () => {
     getMyRole.mockResolvedValue('member');
     // While tracking, the GPS hook reports an in-memory fix (lat/lng + accuracy,

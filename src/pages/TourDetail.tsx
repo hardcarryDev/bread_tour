@@ -574,14 +574,9 @@ export default function TourDetail() {
           />
         </Suspense>
 
-        {/* Directions (F2): route between spots / guide to next unvisited. */}
+        {/* Directions (F2): route between two chosen spots. */}
         <DirectionsPanel
           spots={spots}
-          stampedSpotIds={stampedSpotIds}
-          // In-memory GPS position from the active watch (NFR-GEO-006: never
-          // persisted) so "다음 장소로 안내" can route from the user's current
-          // location once a fix is available (REQ-F2-003 / AC-F2-02).
-          currentLocation={geo.currentPosition}
           // Draw the computed route's real road polyline on the map (REQ-F2-001).
           // result.path is the decoded Kakao road geometry (or [from,to] on the
           // straight-line fallback); MapView renders it as a distinct route line.

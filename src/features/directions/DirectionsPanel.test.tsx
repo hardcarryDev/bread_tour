@@ -57,8 +57,6 @@ describe('DirectionsPanel distance/time (REQ-F2-001/002 / AC-F2-01)', () => {
     render(
       <DirectionsPanel
         spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
         onRoute={onRoute}
       />,
     );
@@ -80,8 +78,6 @@ describe('DirectionsPanel travel-mode toggle (도보/대중교통/차)', () => {
     render(
       <DirectionsPanel
         spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
         onRoute={vi.fn()}
       />,
     );
@@ -113,8 +109,6 @@ describe('DirectionsPanel travel-mode toggle (도보/대중교통/차)', () => {
     render(
       <DirectionsPanel
         spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
         onRoute={vi.fn()}
       />,
     );
@@ -158,8 +152,6 @@ describe('DirectionsPanel travel-mode toggle (도보/대중교통/차)', () => {
     render(
       <DirectionsPanel
         spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
         onRoute={onRoute}
       />,
     );
@@ -201,8 +193,6 @@ describe('DirectionsPanel controlled mode (shared with 내기준정렬)', () => 
     render(
       <DirectionsPanel
         spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
         onRoute={vi.fn()}
         mode="transit"
         onModeChange={vi.fn()}
@@ -223,8 +213,6 @@ describe('DirectionsPanel controlled mode (shared with 내기준정렬)', () => 
     render(
       <DirectionsPanel
         spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
         onRoute={vi.fn()}
         mode="car"
         onModeChange={onModeChange}
@@ -248,8 +236,6 @@ describe('DirectionsPanel controlled mode (shared with 내기준정렬)', () => 
     render(
       <DirectionsPanel
         spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
         onRoute={vi.fn()}
         mode="walk"
         onModeChange={vi.fn()}
@@ -261,58 +247,6 @@ describe('DirectionsPanel controlled mode (shared with 내기준정렬)', () => 
       expect.anything(),
       expect.objectContaining({ mode: 'walk' }),
     );
-  });
-});
-
-describe('DirectionsPanel guide-to-next (REQ-F2-003 / AC-F2-02)', () => {
-  it('routes from current location to the next unvisited spot in order', async () => {
-    const current = { lat: 37.49, lng: 127.01 };
-    render(
-      <DirectionsPanel
-        spots={spots}
-        stampedSpotIds={new Set(['s1'])} // s1 visited -> next is s2
-        currentLocation={current}
-        onRoute={vi.fn()}
-      />,
-    );
-
-    await userEvent.click(
-      screen.getByRole('button', { name: '다음 장소로 안내' }),
-    );
-
-    await waitFor(() => expect(getRoute).toHaveBeenCalled());
-    const [from, to] = getRoute.mock.calls[0];
-    expect(from).toEqual(current);
-    // Next unvisited spot in visit order is s2.
-    expect(to).toEqual({ lat: 37.51, lng: 126.92 });
-  });
-
-  it('enables guide-to-next once a current location is available (C-01 / REQ-F2-003)', () => {
-    render(
-      <DirectionsPanel
-        spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={{ lat: 37.49, lng: 127.01 }}
-        onRoute={vi.fn()}
-      />,
-    );
-    expect(
-      screen.getByRole('button', { name: '다음 장소로 안내' }),
-    ).toBeEnabled();
-  });
-
-  it('disables guide-to-next when current location is unavailable', () => {
-    render(
-      <DirectionsPanel
-        spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
-        onRoute={vi.fn()}
-      />,
-    );
-    expect(
-      screen.getByRole('button', { name: '다음 장소로 안내' }),
-    ).toBeDisabled();
   });
 });
 
@@ -331,8 +265,6 @@ describe('DirectionsPanel fallback notice (A11)', () => {
     render(
       <DirectionsPanel
         spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
         onRoute={vi.fn()}
       />,
     );
@@ -358,8 +290,6 @@ describe('DirectionsPanel fallback notice (A11)', () => {
     render(
       <DirectionsPanel
         spots={spots}
-        stampedSpotIds={new Set()}
-        currentLocation={null}
         onRoute={vi.fn()}
       />,
     );

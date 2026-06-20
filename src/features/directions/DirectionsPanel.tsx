@@ -28,10 +28,6 @@ import {
 
 interface DirectionsPanelProps {
   spots: Spot[];
-  // Spots already stamped — used to find the next unvisited one (REQ-F2-003).
-  stampedSpotIds: ReadonlySet<string>;
-  // Member's current position, or null when location is unavailable.
-  currentLocation: LatLng | null;
   // Emits the computed route so the parent/map can render its polyline.
   onRoute: (route: RouteResult) => void;
   // Optional controlled travel mode. When `mode` + `onModeChange` are provided,
@@ -86,8 +82,6 @@ function describeLeg(leg: RouteLeg): string {
 
 export default function DirectionsPanel({
   spots,
-  stampedSpotIds,
-  currentLocation,
   onRoute,
   mode: controlledMode,
   onModeChange,
@@ -113,8 +107,6 @@ export default function DirectionsPanel({
   const [routeMode, setRouteMode] = useState<TravelMode>('car');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const nextUnvisited = ordered.find((s) => !stampedSpotIds.has(s.id)) ?? null;
 
   async function runRoute(from: LatLng, to: LatLng) {
     setBusy(true);
@@ -146,14 +138,6 @@ export default function DirectionsPanel({
     );
   }
 
-  function handleGuideNext() {
-    if (!currentLocation || !nextUnvisited) return;
-    void runRoute(currentLocation, {
-      lat: nextUnvisited.lat,
-      lng: nextUnvisited.lng,
-    });
-  }
-
   // A successful route reports its own mode; otherwise fall back to whatever the
   // member requested. The straight-line fallback carries no mode.
   const resolvedMode: TravelMode = route?.mode ?? routeMode;
@@ -180,46 +164,47 @@ export default function DirectionsPanel({
         ))}
       </div>
 
+      {/* From / To selects stacked in one block, with 길찾기 alongside them. */}
       <div className="directions-controls">
-        <label>
-          출발 장소
-          <select
-            aria-label="출발 장소"
-            value={fromId}
-            onChange={(e) => setFromId(e.target.value)}
-          >
-            <option value="">선택</option>
-            {ordered.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          도착 장소
-          <select
-            aria-label="도착 장소"
-            value={toId}
-            onChange={(e) => setToId(e.target.value)}
-          >
-            <option value="">선택</option>
-            {ordered.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="button" onClick={handleRouteBetween} disabled={busy}>
-          길찾기
-        </button>
+        <div className="directions-fields">
+          <label className="directions-field">
+            <span className="directions-field-label">출발 장소</span>
+            <select
+              aria-label="출발 장소"
+              value={fromId}
+              onChange={(e) => setFromId(e.target.value)}
+            >
+              <option value="">선택</option>
+              {ordered.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="directions-field">
+            <span className="directions-field-label">도착 장소</span>
+            <select
+              aria-label="도착 장소"
+              value={toId}
+              onChange={(e) => setToId(e.target.value)}
+            >
+              <option value="">선택</option>
+              {ordered.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <button
           type="button"
-          onClick={handleGuideNext}
-          disabled={busy || !currentLocation || !nextUnvisited}
+          className="directions-go"
+          onClick={handleRouteBetween}
+          disabled={busy}
         >
-          다음 장소로 안내
+          길찾기
         </button>
       </div>
 
