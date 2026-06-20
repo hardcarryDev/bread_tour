@@ -3,6 +3,7 @@ import { loadKakaoMaps } from '../../lib/kakao';
 import type { Spot } from '../../types/database';
 import type { LatLng } from '../directions/route';
 import type { SpotMenuWithAuthor } from '../menu/api';
+import { segmentColor } from './spotColors';
 
 // Slice C plugs real stamp status in here; Slice B shows a neutral placeholder.
 // Keeping it a prop keeps the marker-summary contract stable across slices.
@@ -120,15 +121,19 @@ export default function MapView({
       drawnRef.current.push(overlay);
     });
 
-    if (path.length >= 2) {
-      const line = new kakao.maps.Polyline({
-        path,
-        strokeWeight: 4,
-        strokeColor: '#d97706',
-        strokeOpacity: 0.8,
+    // Draw each visit-order segment (spot i -> i+1) as its OWN polyline in a
+    // distinct color (segmentColor) so overlapping legs are easy to tell apart
+    // instead of one indistinguishable orange line. The colors match the
+    // spot-list row connectors.
+    for (let i = 0; i < path.length - 1; i++) {
+      const segment = new kakao.maps.Polyline({
+        path: [path[i], path[i + 1]],
+        strokeWeight: 5,
+        strokeColor: segmentColor(i),
+        strokeOpacity: 0.9,
       });
-      line.setMap(map);
-      drawnRef.current.push(line);
+      segment.setMap(map);
+      drawnRef.current.push(segment);
     }
 
     // Fit the viewport to all spots.

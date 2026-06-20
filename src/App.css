@@ -351,6 +351,107 @@ button.danger {
   color: #fff;
 }
 
+/* Menu photo thumbnails (REQ-F4 images) — wrap, square-ish, mobile-safe. */
+.spot-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.menu-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
+.menu-thumb {
+  position: relative;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 0.4rem;
+  overflow: hidden;
+  border: 1px solid #e0d5c5;
+  flex: 0 0 auto;
+  display: inline-block;
+}
+
+.menu-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ✕ overlay to detach a photo (edit mode). */
+.menu-thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 1.3rem;
+  height: 1.3rem;
+  min-height: 1.3rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* "＋" tile to add photos to an existing menu (wraps a hidden file input). */
+.menu-thumb-add {
+  width: 4rem;
+  height: 4rem;
+  border: 1px dashed #c9b89a;
+  border-radius: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b4a1f;
+  font-size: 1.3rem;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.menu-thumb-add input,
+.menu-file-pick input {
+  display: none;
+}
+
+/* Photo-attach affordance in the new-menu add row. */
+.menu-file-pick {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 44px;
+  border: 1px solid #d8c6a8;
+  border-radius: 0.5rem;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .danger-zone {
   margin-top: 1rem;
 }
@@ -524,6 +625,18 @@ button.danger {
   padding: 0.5rem;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
+  position: relative;
+}
+
+/* Colored connector bridging consecutive rows (matches the map segment color).
+   Sits in the 0.5rem gap below the card, aligned under the order-number badge. */
+.spot-connector {
+  position: absolute;
+  left: 1.4rem;
+  bottom: -0.5rem;
+  width: 5px;
+  height: 0.5rem;
+  border-radius: 2px;
 }
 
 .spot-order {

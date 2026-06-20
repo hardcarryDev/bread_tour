@@ -42,6 +42,19 @@ describe('SpotList ordering display (REQ-F1-005 / AC-F1-07)', () => {
   });
 });
 
+describe('SpotList row connectors (colored route link)', () => {
+  it('renders a colored connector between consecutive rows (n-1 of them)', () => {
+    render(<SpotList spots={spots} isOwner={false} onReorder={vi.fn()} />);
+    // Two spots -> one connector between them.
+    const connector = screen.getByTestId('spot-connector-0');
+    expect(connector).toBeInTheDocument();
+    // The last row has no connector.
+    expect(screen.queryByTestId('spot-connector-1')).not.toBeInTheDocument();
+    // Colored inline (matches the map segment color).
+    expect(connector.style.backgroundColor).not.toBe('');
+  });
+});
+
 describe('SpotList recommended-menu display (REQ-F4-002/003)', () => {
   it('shows recommended menus with contributor inline per spot', () => {
     render(

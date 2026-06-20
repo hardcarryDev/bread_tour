@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Spot } from '../../types/database';
 import type { SpotMenuWithAuthor } from '../menu/api';
+import { segmentColor } from './spotColors';
 import {
   formatDistance,
   formatDuration,
@@ -202,11 +203,42 @@ export default function SpotList({
                         {' '}
                         — {m.author?.display_name ?? m.author_id}
                       </span>
+                      {(m.images?.length ?? 0) > 0 && (
+                        <div className="menu-thumbs">
+                          {m.images!.map((img) => (
+                            <a
+                              key={img.path}
+                              className="menu-thumb"
+                              href={img.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <img
+                                src={img.url}
+                                alt={m.menu_text}
+                                loading="lazy"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
+
+            {/* Colored connector bridging to the next row — same color as this
+                segment's line on the map, so the route is easy to follow across
+                both views. Hidden for the last row. */}
+            {index < sorted.length - 1 && (
+              <span
+                className="spot-connector"
+                aria-hidden="true"
+                data-testid={`spot-connector-${index}`}
+                style={{ backgroundColor: segmentColor(index) }}
+              />
+            )}
           </li>
         );
       })}

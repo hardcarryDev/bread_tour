@@ -190,13 +190,12 @@ describe('MapView markers and ordering (REQ-F3-001/002 / AC-F3-01)', () => {
     expect(labels).toContain('3');
   });
 
-  it('draws a polyline connecting the spots in order', async () => {
+  it('draws one colored connector segment between each consecutive spot pair', async () => {
     render(<MapView spots={spots} />);
-    await waitFor(() => expect(created.polylinePaths.length).toBeGreaterThan(0));
-    // The polyline path has one point per spot, in order.
-    expect(created.polylinePaths[created.polylinePaths.length - 1]).toHaveLength(
-      3,
-    );
+    // 3 spots -> 2 segment polylines, each a 2-point line (so overlapping legs
+    // can be colored distinctly rather than one indistinguishable line).
+    await waitFor(() => expect(created.polylinePaths.length).toBe(2));
+    expect(created.polylinePaths.every((p) => p.length === 2)).toBe(true);
   });
 });
 
@@ -297,8 +296,10 @@ describe('MapView route polyline (REQ-F2-001 / directions overlay)', () => {
     const route = created.polylines.find(
       (p) => p.path.length === routePath.length,
     );
-    const order = created.polylines.find((p) => p.path.length === spots.length);
+    // Order connector is now per-segment (2-point) polylines; pick one.
+    const order = created.polylines.find((p) => p.path.length === 2);
     expect(route?.strokeColor).toBeDefined();
+    expect(order?.strokeColor).toBeDefined();
     expect(route?.strokeColor).not.toBe(order?.strokeColor);
   });
 
