@@ -413,6 +413,9 @@ export default function TourDetail() {
   // segment), so the map stays usable even if routing fails. Clicking the road
   // mode already shown returns to 직선 rather than a no-selection state.
   async function showRouteForMode(mode: RouteOverlayMode) {
+    // Selecting a whole-tour mode clears any single 길찾기 pair route so the
+    // full tour is drawn again.
+    setRoutePath(undefined);
     if (mode === 'straight' || routeModeShown === mode) {
       setActionError(null);
       setRouteLegs(undefined);
@@ -815,7 +818,9 @@ export default function TourDetail() {
               // (차/도보) is shown so the straight line is not drawn over the
               // road geometry. null (default) and 직선 keep it visible.
               showOrderConnector={
-                routeModeShown !== 'car' && routeModeShown !== 'walk'
+                !routePath &&
+                routeModeShown !== 'car' &&
+                routeModeShown !== 'walk'
               }
               // Live "내 위치" marker while GPS tracking is active. This is the
               // same in-memory fix used for directions (NFR-GEO-006: never
@@ -843,7 +848,7 @@ export default function TourDetail() {
                   key={mode}
                   type="button"
                   className="route-mode-btn route-mode-btn--icon"
-                  aria-pressed={routeModeShown === mode}
+                  aria-pressed={!routePath && routeModeShown === mode}
                   aria-busy={routeBusy === mode}
                   aria-label={label}
                   title={label}
@@ -864,7 +869,14 @@ export default function TourDetail() {
           // Draw the computed route's real road polyline on the map (REQ-F2-001).
           // result.path is the decoded Kakao road geometry (or [from,to] on the
           // straight-line fallback); MapView renders it as a distinct route line.
-          onRoute={(result) => setRoutePath(result.path)}
+          // 길찾기 shows a SINGLE pair route: clear the whole-tour overlays
+          // (road legs) so only this one route remains. The always-on straight
+          // connector is also suppressed while a pair route is shown (see
+          // showOrderConnector below).
+          onRoute={(result) => {
+            setRoutePath(result.path);
+            setRouteLegs(undefined);
+          }}
           // Shared travel mode (Feature): the toggle here and the "내기준정렬"
           // button read/write the same selected mode.
           mode={travelMode}

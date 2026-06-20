@@ -194,14 +194,17 @@ vi.mock('../features/map/MapView', () => ({
   default: ({
     spots,
     routePath,
+    showOrderConnector,
     currentLocation,
   }: {
     spots: { id: string }[];
     routePath?: { lat: number; lng: number }[];
+    showOrderConnector?: boolean;
     currentLocation?: { lat: number; lng: number; accuracy?: number } | null;
   }) => (
     <div data-testid="map-view">
-      map:{spots.length} route:{routePath ? routePath.length : 'none'} me:
+      map:{spots.length} route:{routePath ? routePath.length : 'none'}{' '}
+      connector:{showOrderConnector ? 'on' : 'off'} me:
       {currentLocation ? JSON.stringify(currentLocation) : 'null'}
     </div>
   ),
@@ -1018,6 +1021,41 @@ describe('TourDetail "내기준정렬" local distance sort (Feature)', () => {
     expect(screen.getByTestId('route-mode-car')).toHaveAttribute(
       'aria-pressed',
       'false',
+    );
+  });
+
+  // 길찾기 (a single pair route) and the whole-tour 직선/차/도보 overlay are
+  // mutually exclusive: emitting a pair route clears the whole-tour drawing
+  // (straight connector off, no button selected); pressing a mode button clears
+  // the pair route and redraws the whole tour.
+  it('길찾기 shows only the pair route; a mode button restores the whole tour', async () => {
+    renderDetail();
+    await screen.findByTestId('spots-panel');
+
+    // Default: whole-tour straight connector on, no pair route, 직선 selected.
+    expect(screen.getByTestId('map-view')).toHaveTextContent('route:none');
+    expect(screen.getByTestId('map-view')).toHaveTextContent('connector:on');
+    expect(screen.getByTestId('route-mode-straight')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    // 길찾기 emits a pair route → only that route remains.
+    await userEvent.click(screen.getByTestId('emit-route'));
+    expect(screen.getByTestId('map-view')).toHaveTextContent('route:3');
+    expect(screen.getByTestId('map-view')).toHaveTextContent('connector:off');
+    expect(screen.getByTestId('route-mode-straight')).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    // Pressing 직선 clears the pair route and redraws the whole tour.
+    await userEvent.click(screen.getByTestId('route-mode-straight'));
+    expect(screen.getByTestId('map-view')).toHaveTextContent('route:none');
+    expect(screen.getByTestId('map-view')).toHaveTextContent('connector:on');
+    expect(screen.getByTestId('route-mode-straight')).toHaveAttribute(
+      'aria-pressed',
+      'true',
     );
   });
 });
