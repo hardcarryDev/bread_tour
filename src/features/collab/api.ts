@@ -51,15 +51,28 @@ export interface SubscribeOptions {
 
 // Map each collaborative table to its change handler so we register one
 // postgres_changes subscription per table, filtered to this tour.
+//
+// filterByTour: whether to attach a `tour_id=eq.<id>` filter. Every table here
+// has a tour_id column EXCEPT spot_menus (it links to a spot via spot_id only).
+// A filter naming a non-existent column is REJECTED by Realtime and — because
+// all bindings share one channel — that rejection silently kills postgres_changes
+// for the WHOLE channel (spots/stamps/members stop reflecting live). So spot_menus
+// subscribes WITHOUT a tour filter; RLS still scopes it to the user's tours, and
+// onMenusChange triggers a reload that refetches only this tour's menus anyway.
 const TABLE_HANDLERS: Array<{
   table: string;
+  filterByTour: boolean;
   pick: (o: SubscribeOptions) => ((c: RealtimeChange) => void) | undefined;
 }> = [
-  { table: 'spots', pick: (o) => o.onSpotsChange },
-  { table: 'spot_menus', pick: (o) => o.onMenusChange },
-  { table: 'stamps', pick: (o) => o.onStampsChange },
-  { table: 'tour_members', pick: (o) => o.onMembersChange },
-  { table: 'manual_checkin_requests', pick: (o) => o.onManualCheckInChange },
+  { table: 'spots', filterByTour: true, pick: (o) => o.onSpotsChange },
+  { table: 'spot_menus', filterByTour: false, pick: (o) => o.onMenusChange },
+  { table: 'stamps', filterByTour: true, pick: (o) => o.onStampsChange },
+  { table: 'tour_members', filterByTour: true, pick: (o) => o.onMembersChange },
+  {
+    table: 'manual_checkin_requests',
+    filterByTour: true,
+    pick: (o) => o.onManualCheckInChange,
+  },
 ];
 
 // Flatten supabase presenceState() (keyed by presence ref, each holding an array
@@ -95,20 +108,20 @@ export function subscribeTourRealtime(
     config: { presence: { key: options.presenceKey } },
   });
 
-  // One row-change subscription per collaborative table, scoped to this tour.
-  for (const { table, pick } of TABLE_HANDLERS) {
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table,
-        filter: `tour_id=eq.${tourId}`,
-      },
-      (payload: unknown) => {
-        pick(options)?.(payload as RealtimeChange);
-      },
-    );
+  // One row-change subscription per collaborative table. Tables with a tour_id
+  // column are filtered to this tour to trim cross-tour noise; spot_menus has no
+  // tour_id column so it is left unfiltered (see TABLE_HANDLERS note above).
+  for (const { table, filterByTour, pick } of TABLE_HANDLERS) {
+    const changeFilter: {
+      event: '*';
+      schema: 'public';
+      table: string;
+      filter?: string;
+    } = { event: '*', schema: 'public', table };
+    if (filterByTour) changeFilter.filter = `tour_id=eq.${tourId}`;
+    channel.on('postgres_changes', changeFilter, (payload: unknown) => {
+      pick(options)?.(payload as RealtimeChange);
+    });
   }
 
   // Presence: report the connected-member list on every sync/join/leave.

@@ -103,11 +103,17 @@ describe('subscribeTourRealtime (REQ-F5-002/003 — channel wiring)', () => {
     // Manual check-in requests must broadcast so another member sees pending
     // requests live and can confirm them (REQ-F1-007).
     expect(tables).toContain('manual_checkin_requests');
-    // Each subscription must be filtered to this tour id (RLS already scopes,
-    // but the client filter avoids cross-tour noise — REQ-F5-002).
+    // Tables WITH a tour_id column are filtered to this tour (RLS already scopes,
+    // but the client filter trims cross-tour noise — REQ-F5-002).
     for (const h of fakeChannel.__changeHandlers) {
-      const f = h.filter as { filter?: string };
-      expect(f.filter).toContain('t1');
+      const f = h.filter as { table: string; filter?: string };
+      if (f.table === 'spot_menus') {
+        // spot_menus has NO tour_id column; a tour_id filter there is invalid and
+        // would kill postgres_changes for the whole channel, so it MUST be unfiltered.
+        expect(f.filter).toBeUndefined();
+      } else {
+        expect(f.filter).toContain('t1');
+      }
     }
   });
 
