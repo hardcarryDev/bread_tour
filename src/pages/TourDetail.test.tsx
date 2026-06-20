@@ -74,6 +74,11 @@ vi.mock('../features/map/useSpots', () => ({
   useSpots: (...a: unknown[]) => useSpots(...a),
 }));
 
+const useSpotKinds = vi.fn();
+vi.mock('../features/map/useSpotKinds', () => ({
+  useSpotKinds: (...a: unknown[]) => useSpotKinds(...a),
+}));
+
 // --- Slice C mocks (stamp / directions) ----------------------------------
 // TourDetail now wires GPS auto-stamp + progress + directions. These are unit-
 // tested in their own suites; here we stub them so the lifecycle/spot tests
@@ -261,6 +266,12 @@ beforeEach(() => {
     { id: 'm1', tour_id: 't1', user_id: 'u1', role: 'owner' },
     { id: 'm2', tour_id: 't1', user_id: 'u2', role: 'member' },
   ]);
+  useSpotKinds.mockReturnValue({
+    kinds: ['빵집', '음식점'],
+    loading: false,
+    error: null,
+    addKind: vi.fn().mockResolvedValue(undefined),
+  });
   useSpots.mockReturnValue({
     spots: sampleSpots,
     menusBySpot: {

@@ -11,6 +11,10 @@ export interface SpotFormValues {
   menuText: string;
 }
 
+// Default 종류 options when a tour list is not supplied (e.g. in isolation /
+// tests). In the app these come from the per-tour spot_kinds list (migration 10).
+const DEFAULT_KINDS = ['빵집', '음식점'];
+
 interface SpotFormProps {
   onSubmit: (values: SpotFormValues) => Promise<void> | void;
   onCancel: () => void;
@@ -21,15 +25,32 @@ interface SpotFormProps {
     lng?: number;
     kind?: SpotKind;
   };
+  // Selectable 종류 options for this tour, and a persister for the "종류 추가"
+  // button. Both optional so the form still works standalone.
+  kinds?: string[];
+  onAddKind?: (name: string) => Promise<void> | void;
 }
 
 // Spot registration / edit form (REQ-F1-001 data + REQ-F4-001 menu fields).
 // Location capture (A8): the user opens an interactive Kakao map picker
 // (LocationPicker) and either taps the map or searches for a place to set the
 // real coordinate. Submit is blocked until a coordinate exists (AC-F1-06).
-export default function SpotForm({ onSubmit, onCancel, initial }: SpotFormProps) {
+export default function SpotForm({
+  onSubmit,
+  onCancel,
+  initial,
+  kinds,
+  onAddKind,
+}: SpotFormProps) {
+  const kindOptions = kinds && kinds.length > 0 ? kinds : DEFAULT_KINDS;
   const [name, setName] = useState(initial?.name ?? '');
-  const [kind, setKind] = useState<SpotKind>(initial?.kind ?? '빵집');
+  const [kind, setKind] = useState<SpotKind>(
+    initial?.kind ?? kindOptions[0] ?? '빵집',
+  );
+  // Inline "종류 추가" state: when adding, a small text input + 확인 replaces the
+  // dropdown focus so a new category can be typed and persisted.
+  const [addingKind, setAddingKind] = useState(false);
+  const [newKind, setNewKind] = useState('');
   const [menuText, setMenuText] = useState('');
   const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(
     initial?.lat != null && initial?.lng != null
@@ -49,6 +70,24 @@ export default function SpotForm({ onSubmit, onCancel, initial }: SpotFormProps)
     }
     setError(null);
     setPickerOpen(false);
+  }
+
+  // Confirm the "종류 추가" inline input: persist the new option (if a persister
+  // is supplied) and select it. Not a form submit — preventDefault keeps the
+  // surrounding <form> from submitting on Enter.
+  async function handleAddKind() {
+    const value = newKind.trim();
+    if (value.length === 0) return;
+    try {
+      if (!kindOptions.includes(value)) {
+        await onAddKind?.(value);
+      }
+      setKind(value);
+      setNewKind('');
+      setAddingKind(false);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -91,22 +130,61 @@ export default function SpotForm({ onSubmit, onCancel, initial }: SpotFormProps)
 
       <label>
         종류
-        {/* Free text (migration 9): 빵집/음식점 are quick suggestions via the
-            datalist, but members can type any category (카페, 디저트, ...). */}
-        <input
-          type="text"
-          list="spot-kind-options"
-          value={kind}
-          onChange={(e) => setKind(e.target.value)}
-          placeholder="예: 빵집, 음식점, 카페"
-        />
-        <datalist id="spot-kind-options">
-          <option value="빵집" />
-          <option value="음식점" />
-          <option value="카페" />
-          <option value="디저트" />
-        </datalist>
+        {/* Per-tour options (migration 10). "종류 추가" appends a new option to
+            the tour's list so every member sees it. The selected kind is always
+            present in the list even if it was later removed from the tour. */}
+        <select value={kind} onChange={(e) => setKind(e.target.value)}>
+          {(kindOptions.includes(kind)
+            ? kindOptions
+            : [kind, ...kindOptions]
+          ).map((k) => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
+        </select>
       </label>
+
+      {addingKind ? (
+        <div className="spot-form-add-kind">
+          <input
+            type="text"
+            value={newKind}
+            data-testid="new-kind-input"
+            onChange={(e) => setNewKind(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void handleAddKind();
+              }
+            }}
+            placeholder="새 종류 (예: 카페)"
+            aria-label="새 종류 이름"
+          />
+          <button type="button" data-testid="confirm-add-kind" onClick={handleAddKind}>
+            확인
+          </button>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => {
+              setAddingKind(false);
+              setNewKind('');
+            }}
+          >
+            취소
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="link-button spot-form-add-kind-toggle"
+          data-testid="add-kind"
+          onClick={() => setAddingKind(true)}
+        >
+          + 종류 추가
+        </button>
+      )}
 
       <div className="spot-form-location">
         <button

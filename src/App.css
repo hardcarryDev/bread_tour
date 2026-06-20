@@ -507,6 +507,27 @@ button.danger {
   box-sizing: border-box;
 }
 
+/* "종류 추가" controls: the toggle link and the inline new-kind input row. */
+.spot-form-add-kind-toggle {
+  align-self: flex-start;
+  padding-left: 0;
+}
+
+.spot-form-add-kind {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.spot-form-add-kind input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.spot-form-add-kind button {
+  flex: 0 0 auto;
+}
+
 /* Interactive location picker (A8) — full-screen modal, mobile-friendly. */
 .location-picker-overlay {
   position: fixed;

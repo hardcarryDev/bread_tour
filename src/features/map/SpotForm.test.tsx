@@ -99,14 +99,28 @@ describe('SpotForm coordinate capture + menu fields (REQ-F1-001, REQ-F4-001 / AC
     expect(arg.menuText).toBe('소금빵');
   });
 
-  it('submits a custom free-text 종류 (not limited to 빵집/음식점)', async () => {
+  it('adds a new 종류 via the 종류 추가 button and submits it', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<SpotForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    const onAddKind = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SpotForm
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        kinds={['빵집', '음식점']}
+        onAddKind={onAddKind}
+      />,
+    );
 
     await userEvent.type(screen.getByLabelText(/이름/), '미뉴트빠삐용');
-    const kindField = screen.getByLabelText(/종류/);
-    await userEvent.clear(kindField);
-    await userEvent.type(kindField, '카페');
+    // Open the inline add field, type a new category, confirm.
+    await userEvent.click(screen.getByTestId('add-kind'));
+    await userEvent.type(screen.getByTestId('new-kind-input'), '카페');
+    await userEvent.click(screen.getByTestId('confirm-add-kind'));
+
+    // The new option is persisted via onAddKind and selected in the dropdown.
+    expect(onAddKind).toHaveBeenCalledWith('카페');
+    expect(screen.getByLabelText(/종류/)).toHaveValue('카페');
+
     await pickLocationOnMap(36.3275, 127.4276);
     await userEvent.click(screen.getByRole('button', { name: /저장/ }));
 

@@ -9,6 +9,7 @@ import {
   removeMember,
 } from '../features/tour/api';
 import { useSpots } from '../features/map/useSpots';
+import { useSpotKinds } from '../features/map/useSpotKinds';
 import SpotList from '../features/map/SpotList';
 import SpotForm, { type SpotFormValues } from '../features/map/SpotForm';
 import {
@@ -71,6 +72,8 @@ export default function TourDetail() {
     loading: spotsLoading,
     reload: reloadSpots,
   } = useSpots(tourId);
+  // Per-tour 종류 list for the spot form dropdown + "종류 추가" button (F1).
+  const { kinds: spotKinds, addKind: addSpotKindOption } = useSpotKinds(tourId);
   const [showSpotForm, setShowSpotForm] = useState(false);
   const [editingSpot, setEditingSpot] = useState<Spot | null>(null);
   // Real road route to overlay on the map (REQ-F2-001). Set from DirectionsPanel's
@@ -515,6 +518,8 @@ export default function TourDetail() {
 
         {showSpotForm && (
           <SpotForm
+            kinds={spotKinds}
+            onAddKind={addSpotKindOption}
             onSubmit={handleAddSpot}
             onCancel={() => setShowSpotForm(false)}
           />
@@ -528,6 +533,8 @@ export default function TourDetail() {
               lng: editingSpot.lng,
               kind: editingSpot.kind,
             }}
+            kinds={spotKinds}
+            onAddKind={addSpotKindOption}
             onSubmit={handleEditSpot}
             onCancel={() => setEditingSpot(null)}
           />

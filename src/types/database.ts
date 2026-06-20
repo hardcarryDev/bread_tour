@@ -174,6 +174,29 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Per-tour selectable 종류 list (migration 10). Backs the "종류 추가"
+      // button; spots.kind stores the chosen label as free text.
+      spot_kinds: {
+        Row: {
+          id: string;
+          tour_id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tour_id: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          tour_id?: string;
+          name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       spot_menus: {
         Row: {
           id: string;
@@ -327,6 +350,7 @@ export type Tour = Database['public']['Tables']['tours']['Row'];
 export type TourMember = Database['public']['Tables']['tour_members']['Row'];
 export type TourInvite = Database['public']['Tables']['tour_invites']['Row'];
 export type Spot = Database['public']['Tables']['spots']['Row'];
+export type SpotKindRow = Database['public']['Tables']['spot_kinds']['Row'];
 export type SpotMenu = Database['public']['Tables']['spot_menus']['Row'];
 export type Stamp = Database['public']['Tables']['stamps']['Row'];
 export type ManualCheckInRequest =

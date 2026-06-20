@@ -25,6 +25,36 @@ export async function listSpots(tourId: string): Promise<Spot[]> {
   return (data ?? []) as Spot[];
 }
 
+// List a tour's selectable 종류 options in creation order (oldest first, so the
+// 빵집/음식점 defaults lead). Backs the spot form dropdown (migration 10).
+export async function listSpotKinds(tourId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('spot_kinds')
+    .select('name')
+    .eq('tour_id', tourId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => (r as { name: string }).name);
+}
+
+// Add a new 종류 option to a tour (the "종류 추가" button). Returns the trimmed
+// label. A duplicate (unique tour_id+name) is treated as success — the option
+// already exists, which is the caller's desired end state.
+export async function addSpotKind(
+  tourId: string,
+  name: string,
+): Promise<string> {
+  const trimmed = name.trim();
+  const { error } = await supabase
+    .from('spot_kinds')
+    .insert({ tour_id: tourId, name: trimmed });
+  // 23505 = unique_violation: the label is already in the list.
+  if (error && (error as { code?: string }).code !== '23505') {
+    throw new Error(error.message);
+  }
+  return trimmed;
+}
+
 // @MX:ANCHOR: [AUTO] addSpot is the single registration path for spots; it
 // stores the fixed coordinate + arrival radius and appends the spot at the next
 // 1-based order_index so reorder_spots() (1..N) stays consistent.

@@ -8,7 +8,9 @@ vi.mock('../../lib/supabase', () => {
 import { supabase } from '../../lib/supabase';
 import {
   addSpot,
+  addSpotKind,
   deleteSpot,
+  listSpotKinds,
   listSpots,
   reorderSpots,
   updateSpot,
@@ -124,6 +126,47 @@ describe('addSpot (REQ-F1-001 / AC-F1-06)', () => {
     expect(b.insert).toHaveBeenCalledWith(
       expect.objectContaining({ kind: '빵집' }),
     );
+  });
+});
+
+describe('spot_kinds (per-tour 종류 list / 종류 추가)', () => {
+  it('lists a tour kind names in creation order', async () => {
+    const b = builder({
+      data: [{ name: '빵집' }, { name: '음식점' }, { name: '카페' }],
+      error: null,
+    });
+    mockedFrom.mockReturnValue(b);
+
+    const result = await listSpotKinds('t1');
+
+    expect(mockedFrom).toHaveBeenCalledWith('spot_kinds');
+    expect(b.eq).toHaveBeenCalledWith('tour_id', 't1');
+    expect(b.order).toHaveBeenCalledWith('created_at', { ascending: true });
+    expect(result).toEqual(['빵집', '음식점', '카페']);
+  });
+
+  it('inserts a trimmed new kind and returns it', async () => {
+    const b = builder({ data: null, error: null });
+    mockedFrom.mockReturnValue(b);
+
+    const result = await addSpotKind('t1', '  카페  ');
+
+    expect(b.insert).toHaveBeenCalledWith({ tour_id: 't1', name: '카페' });
+    expect(result).toBe('카페');
+  });
+
+  it('treats a duplicate (unique violation 23505) as success', async () => {
+    const b = builder({ data: null, error: { code: '23505', message: 'dup' } });
+    mockedFrom.mockReturnValue(b);
+
+    await expect(addSpotKind('t1', '빵집')).resolves.toBe('빵집');
+  });
+
+  it('throws on a non-duplicate insert error', async () => {
+    const b = builder({ data: null, error: { code: '42501', message: 'denied' } });
+    mockedFrom.mockReturnValue(b);
+
+    await expect(addSpotKind('t1', '카페')).rejects.toThrow('denied');
   });
 });
 
