@@ -373,11 +373,28 @@ button.danger {
   flex: 0 0 auto;
 }
 
-/* "이름 수정" link sits before the ✕ delete; keep it compact. */
+/* Circular ✎ rename button, styled to match the ✕ delete (brand color). */
 .menu-edit {
   flex: 0 0 auto;
-  font-size: 0.85rem;
-  white-space: nowrap;
+  width: 1.5rem;
+  height: 1.5rem;
+  min-height: 1.5rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid #e0d5c5;
+  background: #fff;
+  color: #b5651d;
+  font-size: 0.9rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-edit:hover {
+  background: #b5651d;
+  border-color: #b5651d;
+  color: #fff;
 }
 
 .menu-thumbs {

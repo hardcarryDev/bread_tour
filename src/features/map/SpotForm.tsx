@@ -387,11 +387,13 @@ export default function SpotForm({
                         {mine && onUpdateMenu && (
                           <button
                             type="button"
-                            className="link-button menu-edit"
+                            className="menu-edit"
+                            aria-label={`메뉴 이름 수정: ${m.menu_text}`}
+                            title="이름 수정"
                             data-testid={`edit-menu-${m.id}`}
                             onClick={() => startEditMenu(m)}
                           >
-                            이름 수정
+                            <span aria-hidden="true">✎</span>
                           </button>
                         )}
                         {mine && (
