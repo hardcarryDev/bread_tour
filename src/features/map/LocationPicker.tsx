@@ -101,8 +101,12 @@ export default function LocationPicker({
   }
 
   // Kakao Places keyword search: type a name -> list results -> pick one (A8).
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
+  // NOT a form submit handler: this picker renders inside SpotForm's <form>, so a
+  // nested <form> / submit button (or Enter implicit-submit) would submit the
+  // OUTER form and close the picker before searching (the "맵이 닫히기만 함" bug).
+  // Search is therefore driven by a plain button onClick + an explicit Enter
+  // handler that calls preventDefault.
+  function runSearch() {
     const kakao = kakaoRef.current;
     const term = keyword.trim();
     if (!kakao?.maps.services?.Places || term.length === 0) return;
@@ -138,19 +142,31 @@ export default function LocationPicker({
       aria-label="지도에서 위치 선택"
     >
       <div className="location-picker">
-        <form className="location-picker-search" onSubmit={handleSearch}>
+        <div className="location-picker-search">
           <input
             type="text"
             data-testid="picker-search-input"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter searches in place; preventDefault stops the surrounding
+              // SpotForm <form> from submitting (which would close the picker).
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                runSearch();
+              }
+            }}
             placeholder="장소 이름 검색 (예: 성심당)"
             aria-label="장소 검색"
           />
-          <button type="submit" data-testid="picker-search-submit">
+          <button
+            type="button"
+            data-testid="picker-search-submit"
+            onClick={runSearch}
+          >
             검색
           </button>
-        </form>
+        </div>
 
         {results.length > 0 && (
           <ul className="location-picker-results" data-testid="picker-results">

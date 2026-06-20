@@ -109,6 +109,29 @@ describe('SpotForm coordinate capture + menu fields (REQ-F1-001, REQ-F4-001 / AC
     expect(onSubmit.mock.calls[0][0].menuText).toBe('');
   });
 
+  it('searching in the picker does not submit the form / close the map (nested-form regression)', async () => {
+    const onSubmit = vi.fn();
+    render(<SpotForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    await userEvent.type(screen.getByLabelText(/이름/), '빵집');
+    await userEvent.click(screen.getByTestId('pin-here'));
+    await waitFor(() =>
+      expect(captured.mapClickHandlers.length).toBeGreaterThan(0),
+    );
+
+    // Clicking 검색 must run the place search, NOT submit the surrounding
+    // SpotForm <form> (which previously closed the picker before searching).
+    await userEvent.type(screen.getByTestId('picker-search-input'), '성심당');
+    await userEvent.click(screen.getByTestId('picker-search-submit'));
+    expect(onSubmit).not.toHaveBeenCalled();
+    // The picker is still open (the map did not close).
+    expect(screen.getByTestId('picker-confirm')).toBeInTheDocument();
+
+    // Pressing Enter in the search box must not submit the outer form either.
+    await userEvent.type(screen.getByTestId('picker-search-input'), '{Enter}');
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByTestId('picker-confirm')).toBeInTheDocument();
+  });
+
   it('blocks submit until a location is picked', async () => {
     const onSubmit = vi.fn();
     render(<SpotForm onSubmit={onSubmit} onCancel={vi.fn()} />);
