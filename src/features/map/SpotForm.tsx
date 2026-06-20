@@ -272,11 +272,12 @@ export default function SpotForm({
                     {canDelete && (
                       <button
                         type="button"
-                        className="link-button danger"
+                        className="menu-delete"
                         aria-label={`메뉴 삭제: ${m.menu_text}`}
+                        title="삭제"
                         onClick={() => void handleDeleteMenu(m.id)}
                       >
-                        삭제
+                        <span aria-hidden="true">×</span>
                       </button>
                     )}
                   </li>

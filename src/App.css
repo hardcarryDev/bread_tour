@@ -319,6 +319,30 @@ button.danger {
   white-space: nowrap;
 }
 
+/* Simple circular ✕ delete for a signature menu (overrides the base button). */
+.menu-delete {
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  min-height: 1.5rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid #e0b4ad;
+  background: #fff;
+  color: #c0392b;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-delete:hover {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}
+
 .danger-zone {
   margin-top: 1rem;
 }
