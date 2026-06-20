@@ -99,6 +99,7 @@ export async function getPathRoute(
     points.slice(0, -1).map((from, i) => getRoute(from, points[i + 1], opts)),
   );
   const path: LatLng[] = [];
+  const legPaths: LatLng[][] = [];
   let distanceM = 0;
   let durationSec = 0;
   let fallback = false;
@@ -106,8 +107,9 @@ export async function getPathRoute(
     distanceM += leg.distanceM;
     durationSec += leg.durationSec;
     fallback = fallback || leg.fallback;
+    legPaths.push(leg.path);
     // Drop the shared junction point (leg N's last == leg N+1's first).
     path.push(...(i === 0 ? leg.path : leg.path.slice(1)));
   });
-  return { path, distanceM, durationSec, fallback, mode };
+  return { path, legPaths, distanceM, durationSec, fallback, mode };
 }

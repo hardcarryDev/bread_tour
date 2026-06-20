@@ -44,6 +44,11 @@ export interface RouteResult {
   fare?: number;
   transferCount?: number;
   totalWalkTime?: number;
+  // Per-waypoint-segment geometry for a whole-tour route (getPathRoute). Index i
+  // is the road path from spot i to spot i+1, so the map can draw each segment
+  // in its own color (matching the spot-list connectors). Absent for single
+  // point-to-point routes.
+  legPaths?: LatLng[][];
 }
 
 // Average walking speed (m/s) used to estimate time for the straight-line

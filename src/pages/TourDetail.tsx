@@ -91,10 +91,13 @@ export default function TourDetail() {
   // onRoute callback so the actual Kakao road polyline is drawn, not just the
   // straight spot-order connector. undefined => no route currently shown.
   const [routePath, setRoutePath] = useState<LatLng[] | undefined>(undefined);
-  // Whole-tour car road route overlay (REQ-F2-001): on-demand, replaces the
-  // straight visit-order connector with the road-following path while shown.
-  const [carRouteOn, setCarRouteOn] = useState(false);
-  const [carRouteBusy, setCarRouteBusy] = useState(false);
+  // Whole-tour road route overlay (REQ-F2-001): on-demand per travel mode
+  // (도보/대중교통/차). Each leg is drawn in its own color. `routeLegs` holds the
+  // per-segment geometry; `routeModeShown` is the mode currently drawn (null =
+  // none); `routeBusy` is the mode being fetched.
+  const [routeLegs, setRouteLegs] = useState<LatLng[][] | undefined>(undefined);
+  const [routeModeShown, setRouteModeShown] = useState<TravelMode | null>(null);
+  const [routeBusy, setRouteBusy] = useState<TravelMode | null>(null);
 
   // Selected travel mode, lifted from DirectionsPanel so BOTH the directions
   // toggle AND the "내기준정렬" button read the same mode (Feature). Default 차/car.
@@ -347,31 +350,31 @@ export default function TourDetail() {
     }
   }
 
-  // Toggle the whole-tour car road route overlay. ON: route through every spot
-  // in visit order (car) and draw the road path; OFF: clear it back to the
-  // straight connector. getPathRoute never throws (each leg degrades to a
+  // Show the whole-tour route for a travel mode (도보/대중교통/차), drawing each
+  // visit-order segment in its own color. Clicking the mode that is already
+  // shown toggles it off. getPathRoute never throws (each leg degrades to a
   // straight segment), so the map stays usable even if routing fails.
-  async function toggleCarRoute() {
-    if (carRouteOn) {
-      setCarRouteOn(false);
-      setRoutePath(undefined);
+  async function showRouteForMode(mode: TravelMode) {
+    if (routeModeShown === mode) {
+      setRouteModeShown(null);
+      setRouteLegs(undefined);
       return;
     }
     const ordered = [...spots].sort((a, b) => a.order_index - b.order_index);
     if (ordered.length < 2) return;
-    setCarRouteBusy(true);
+    setRouteBusy(mode);
     setActionError(null);
     try {
       const result = await getPathRoute(
         ordered.map((s) => ({ lat: s.lat, lng: s.lng })),
-        { mode: 'car' },
+        { mode },
       );
-      setRoutePath(result.path);
-      setCarRouteOn(true);
+      setRouteLegs(result.legPaths);
+      setRouteModeShown(mode);
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
-      setCarRouteBusy(false);
+      setRouteBusy(null);
     }
   }
 
@@ -732,6 +735,7 @@ export default function TourDetail() {
             menusBySpot={menusBySpot}
             stampBySpot={stampBySpot}
             routePath={routePath}
+            routeLegs={routeLegs}
             // Live "내 위치" marker while GPS tracking is active. This is the
             // same in-memory fix used for directions (NFR-GEO-006: never
             // persisted); it appears while tracking and clears to null on stop.
@@ -739,22 +743,28 @@ export default function TourDetail() {
           />
         </Suspense>
 
-        {/* Whole-tour car road route (REQ-F2-001): draw the visit order as the
-            real road-following path instead of straight connector lines. */}
+        {/* Whole-tour road route per mode (REQ-F2-001): draw the visit order as
+            the real road-following path, each segment in its own color. One
+            button per mode; the active mode toggles off when pressed again. */}
         {spots.length >= 2 && (
-          <div className="car-route-control">
-            <button
-              type="button"
-              data-testid="toggle-car-route"
-              onClick={() => void toggleCarRoute()}
-              disabled={carRouteBusy}
-            >
-              {carRouteBusy
-                ? '경로 계산 중…'
-                : carRouteOn
-                  ? '차 경로 끄기'
-                  : '차 경로 보기'}
-            </button>
+          <div className="route-mode-control" role="group" aria-label="전체 경로 보기">
+            {([
+              { mode: 'walk', label: '도보' },
+              { mode: 'transit', label: '대중교통' },
+              { mode: 'car', label: '차' },
+            ] as const).map(({ mode, label }) => (
+              <button
+                key={mode}
+                type="button"
+                className="route-mode-btn"
+                aria-pressed={routeModeShown === mode}
+                data-testid={`route-mode-${mode}`}
+                onClick={() => void showRouteForMode(mode)}
+                disabled={routeBusy !== null}
+              >
+                {routeBusy === mode ? '계산 중…' : label}
+              </button>
+            ))}
           </div>
         )}
 

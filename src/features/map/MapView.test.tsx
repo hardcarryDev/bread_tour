@@ -348,6 +348,52 @@ describe('MapView route polyline (REQ-F2-001 / directions overlay)', () => {
     rerender(<MapView spots={spots} routePath={undefined} />);
     await waitFor(() => expect(route.setMap).toHaveBeenCalledWith(null));
   });
+
+  it('draws each whole-tour route leg in its own color (routeLegs)', async () => {
+    // Leg lengths 3 and 4 are chosen so they don't collide with the 2-point
+    // spot-order connector segments also present on the map.
+    const routeLegs = [
+      [
+        { lat: 37.544, lng: 127.055 },
+        { lat: 37.55, lng: 127.0 },
+        { lat: 37.561, lng: 126.925 },
+      ],
+      [
+        { lat: 37.561, lng: 126.925 },
+        { lat: 37.558, lng: 126.92 },
+        { lat: 37.557, lng: 126.915 },
+        { lat: 37.556, lng: 126.91 },
+      ],
+    ];
+    render(<MapView spots={spots} routeLegs={routeLegs} />);
+    // One polyline per leg, with the leg's full geometry (3 + 4 points).
+    await waitFor(() =>
+      expect(created.polylines.some((p) => p.path.length === 3)).toBe(true),
+    );
+    const legA = created.polylines.find((p) => p.path.length === 3);
+    const legB = created.polylines.find((p) => p.path.length === 4);
+    expect(legA?.strokeColor).toBeDefined();
+    expect(legB?.strokeColor).toBeDefined();
+    // Adjacent legs are drawn in distinct colors.
+    expect(legA?.strokeColor).not.toBe(legB?.strokeColor);
+  });
+
+  it('clears the colored route legs when routeLegs is removed', async () => {
+    const routeLegs = [
+      [
+        { lat: 37.544, lng: 127.055 },
+        { lat: 37.55, lng: 127.0 },
+        { lat: 37.561, lng: 126.925 },
+      ],
+    ];
+    const { rerender } = render(<MapView spots={spots} routeLegs={routeLegs} />);
+    await waitFor(() =>
+      expect(created.polylines.some((p) => p.path.length === 3)).toBe(true),
+    );
+    const leg = created.polylines.find((p) => p.path.length === 3)!;
+    rerender(<MapView spots={spots} routeLegs={undefined} />);
+    await waitFor(() => expect(leg.setMap).toHaveBeenCalledWith(null));
+  });
 });
 
 describe('MapView "내 위치" live location marker (REQ-F3 location indicator)', () => {

@@ -164,6 +164,10 @@ describe('getPathRoute (whole-tour multi-leg road route, REQ-F2-001)', () => {
     expect(r.durationSec).toBe(660);
     expect(r.fallback).toBe(false);
     expect(r.mode).toBe('car');
+    // Per-segment geometry is preserved so the map can color each leg.
+    expect(r.legPaths).toHaveLength(2);
+    expect(r.legPaths?.[0]?.[0]).toEqual(P[0]);
+    expect(r.legPaths?.[1]?.[r.legPaths[1].length - 1]).toEqual(P[2]);
   });
 
   it('marks the whole route as fallback if any leg fell back to a straight line', async () => {

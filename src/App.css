@@ -488,9 +488,34 @@ button.danger {
 }
 
 /* On-demand "차 경로 보기" toggle, sits between the map and the directions panel. */
-.car-route-control {
+/* Whole-tour route mode buttons (도보/대중교통/차), segmented like the
+   directions mode tabs. The active mode is highlighted. */
+.route-mode-control {
   display: flex;
+  gap: 0;
   margin: 0.5rem 0;
+  border: 1px solid #d8c6a8;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.route-mode-btn {
+  flex: 1 1 0;
+  min-height: 44px;
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  color: #6b4a1f;
+  font-weight: 600;
+}
+
+.route-mode-btn + .route-mode-btn {
+  border-left: 1px solid #e0d5c5;
+}
+
+.route-mode-btn[aria-pressed='true'] {
+  background: #b5651d;
+  color: #fff;
 }
 
 .route-loading {

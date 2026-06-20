@@ -19,6 +19,11 @@ interface MapViewProps {
   // DirectionsPanel/getRoute. Drawn as a distinct blue line over the gray
   // spot-order connector. undefined => no route overlay (cleared).
   routePath?: LatLng[];
+  // Whole-tour road route split per visit-order segment (getPathRoute.legPaths).
+  // Leg i is drawn in segmentColor(i) — the same color as the straight connector
+  // and the spot-list row connector — so each leg of the route is distinct
+  // instead of one solid color. undefined => no colored route overlay.
+  routeLegs?: LatLng[][];
   // Live "내 위치" indicator while GPS tracking is active. lat/lng position the
   // marker; optional accuracy (metres) draws a translucent accuracy circle.
   // null/undefined => no marker (tracking off / position unknown). The value is
@@ -41,6 +46,7 @@ export default function MapView({
   menusBySpot = {},
   stampBySpot = {},
   routePath,
+  routeLegs,
   currentLocation,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -52,6 +58,9 @@ export default function MapView({
   const routeLineRef = useRef<{ setMap(map: KakaoMap | null): void } | null>(
     null,
   );
+  // Per-segment colored whole-tour route legs (getPathRoute). Tracked in their
+  // own ref so they replace/clear independently of the blue point-to-point route.
+  const routeLegLinesRef = useRef<{ setMap(map: KakaoMap | null): void }[]>([]);
   // "내 위치" overlays (blue dot + optional accuracy circle) are tracked in their
   // own refs so they update/clear independently of the spot markers and route.
   const meDotRef = useRef<KakaoCircle | null>(null);
@@ -173,6 +182,33 @@ export default function MapView({
     line.setMap(map);
     routeLineRef.current = line;
   }, [ready, routePath]);
+
+  // Draw / replace / clear the per-segment colored whole-tour route (REQ-F2-001).
+  // Each leg i is its own polyline in segmentColor(i), so the route legs are as
+  // easy to tell apart as the straight connector (no more single solid color).
+  useEffect(() => {
+    if (!ready || !kakaoRef.current || !mapRef.current) return;
+    const kakao = kakaoRef.current;
+    const map = mapRef.current;
+
+    for (const obj of routeLegLinesRef.current) obj.setMap(null);
+    routeLegLinesRef.current = [];
+
+    if (!routeLegs) return;
+
+    routeLegs.forEach((leg, i) => {
+      if (leg.length < 2) return;
+      const line = new kakao.maps.Polyline({
+        path: leg.map((p) => new kakao.maps.LatLng(p.lat, p.lng)),
+        strokeWeight: 6,
+        strokeColor: segmentColor(i),
+        strokeOpacity: 0.95,
+        zIndex: 6,
+      });
+      line.setMap(map);
+      routeLegLinesRef.current.push(line);
+    });
+  }, [ready, routeLegs]);
 
   // Draw / move / clear the live "내 위치" indicator. The marker is a small
   // filled blue dot with a white-ish ring (visually distinct from the amber
