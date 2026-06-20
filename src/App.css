@@ -517,6 +517,7 @@ button.danger {
   min-height: 44px;
   padding: 0.5rem 0.75rem;
   background: none;
+  color: #222;
   border: none;
   border-bottom: 1px solid #f3f4f6;
   cursor: pointer;
