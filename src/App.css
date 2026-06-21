@@ -1565,11 +1565,18 @@ button.menu-thumb {
    Muted base text; the per-person net spans carry the sign color. 360px-safe. */
 .spot-settlement {
   flex: 1 0 100%;
+  min-width: 0;
+  /* Wrap per person-chunk: each part is nowrap, the container wraps between
+     them so a long settlement no longer overflows the right edge. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.15rem;
+  row-gap: 0.1rem;
   font-size: 0.85rem;
   color: #6b4a1f;
   opacity: 0.92;
   line-height: 1.5;
-  word-break: keep-all;
 }
 .spot-settlement-part {
   white-space: nowrap;

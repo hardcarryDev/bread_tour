@@ -297,7 +297,9 @@ export default function SpotList({
                 className="spot-settlement"
                 data-testid={`spot-settlement-${spot.id}`}
               >
-                정산 {formatWon(settlement.amount)}
+                <span className="spot-settlement-part">
+                  정산 {formatWon(settlement.amount)}
+                </span>
                 {Object.entries(settlementNets).map(([userId, net]) => {
                   const isSettled = settledSet?.has(userId) ?? false;
                   return (
