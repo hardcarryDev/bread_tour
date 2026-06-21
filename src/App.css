@@ -1524,3 +1524,120 @@ button.menu-thumb {
   color: #fff;
   font-size: 0.85rem;
 }
+
+/* Settlement (정산) --------------------------------------------------------- */
+
+/* Sign colors, shared by the modal preview, per-row caption, and summary. */
+.settlement-net-pos {
+  color: #16a34a;
+  font-weight: 600;
+}
+.settlement-net-neg {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* Per-row caption below a spot's content (full width, like the distance line).
+   Muted base text; the per-person net spans carry the sign color. 360px-safe. */
+.spot-settlement {
+  flex: 1 0 100%;
+  font-size: 0.85rem;
+  color: #6b4a1f;
+  opacity: 0.92;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.spot-settlement-part {
+  white-space: nowrap;
+}
+
+/* Modal: 참여자 / 결제자 sections + live preview. Reuses .modal-backdrop/.modal. */
+.settlement-modal {
+  max-width: 460px;
+}
+.settlement-group {
+  border: 1px solid #d8c6a8;
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  margin: 0;
+}
+.settlement-group legend {
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b4a1f;
+}
+.settlement-check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.4rem 0.75rem;
+}
+.settlement-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.settlement-check input {
+  width: auto;
+  margin: 0;
+}
+
+.settlement-preview {
+  background: #faf6ef;
+  border: 1px solid #d8c6a8;
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+}
+.settlement-preview-title {
+  font-size: 0.8rem;
+  margin: 0 0 0.35rem;
+}
+.settlement-preview ul,
+.settlement-net-list,
+.settlement-transfer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.settlement-preview li,
+.settlement-net-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+/* Tour-wide summary card (cream, warm palette). */
+.settlement-summary {
+  margin-top: 1rem;
+}
+.settlement-summary h2 {
+  font-size: 1.05rem;
+  color: #6b4a1f;
+  margin: 0 0 0.5rem;
+}
+.settlement-summary-card {
+  background: #faf6ef;
+  border: 1px solid #d8c6a8;
+  border-radius: 0.6rem;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.settlement-transfers-title {
+  font-size: 0.85rem;
+  margin: 0;
+  border-top: 1px solid #d8c6a8;
+  padding-top: 0.55rem;
+}
+.settlement-transfer-list li {
+  font-size: 0.9rem;
+  color: #6b4a1f;
+  word-break: keep-all;
+}

@@ -1,7 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import type { Spot } from '../../types/database';
+import type { Spot, SpotSettlement, TourMember } from '../../types/database';
 import type { SpotMenuWithAuthor } from '../menu/api';
 import ImageViewer, { type ViewerImage } from '../../components/ImageViewer';
+import { displayNameFor, type DisplayNameMap } from '../profile/api';
+import { spotNetByUser } from '../settlement/compute';
+import { formatSignedWon, formatWon } from '../settlement/format';
 import { segmentColor } from './spotColors';
 import {
   formatDistance,
@@ -42,6 +45,15 @@ interface SpotListProps {
   // signature/recommended menu is visible without opening the map marker
   // (REQ-F4-002/003). Empty / missing => "추천 메뉴 없음".
   menusBySpot?: Record<string, SpotMenuWithAuthor[]>;
+  // spot_id -> the spot's settlement (정산), if any. When present, the row shows a
+  // compact per-person net caption; the 정산 button opens the editor either way.
+  settlementBySpot?: Record<string, SpotSettlement>;
+  // Open the settlement editor for a spot (any member, not owner-gated). When
+  // absent, the 정산 button is not rendered.
+  onSettle?: (spotId: string) => void;
+  // Members + name map for resolving the settlement caption's person labels.
+  members?: TourMember[];
+  profileNames?: DisplayNameMap;
 }
 
 // Mode word for the green caption, matching the DirectionsPanel basis labels.
@@ -71,6 +83,9 @@ export default function SpotList({
   sortMode,
   distanceBySpot,
   menusBySpot = {},
+  settlementBySpot = {},
+  onSettle,
+  profileNames = {},
 }: SpotListProps) {
   // In-app photo viewer state: the image set being viewed + the active index.
   // null when closed. Opening a menu's thumbnail loads that menu's full image
@@ -120,6 +135,15 @@ export default function SpotList({
         // the move()/disabled logic (independent of the displayed order).
         const planIndex = planOrdered.findIndex((s) => s.id === spot.id);
         const dist = sortMode ? distanceBySpot?.[spot.id] : undefined;
+        // Settlement caption parts (정산): per-person net for this spot, if any.
+        const settlement = settlementBySpot[spot.id];
+        const settlementNets = settlement
+          ? spotNetByUser({
+              amount: settlement.amount,
+              payerIds: settlement.payer_ids,
+              participantIds: settlement.participant_ids,
+            })
+          : null;
 
         // Inline edit: replace this row's content with the editor (the edit form
         // appears IN the clicked row, not in a separate panel above the list).
@@ -197,6 +221,17 @@ export default function SpotList({
                   삭제
                 </button>
               )}
+              {/* 정산: any member may open the settlement editor (REQ F-정산). */}
+              {onSettle && (
+                <button
+                  type="button"
+                  className="link-button"
+                  aria-label={`정산: ${spot.name}`}
+                  onClick={() => onSettle(spot.id)}
+                >
+                  정산
+                </button>
+              )}
             </span>
 
             {/* Recommended/signature menu, inline per row (REQ-F4-002/003) so it
@@ -247,6 +282,35 @@ export default function SpotList({
                 </ul>
               )}
             </div>
+
+            {/* Settlement caption (정산): full-width line below the row content,
+                like the green distance caption. Lists each person's net for this
+                spot, sign-aware (받을 +, 낼 −). 360px-safe (wraps). */}
+            {settlement && settlementNets && (
+              <span
+                className="spot-settlement"
+                data-testid={`spot-settlement-${spot.id}`}
+              >
+                정산 {formatWon(settlement.amount)}
+                {Object.entries(settlementNets).map(([userId, net]) => (
+                  <span key={userId} className="spot-settlement-part">
+                    {' · '}
+                    {displayNameFor(userId, profileNames)}{' '}
+                    <span
+                      className={
+                        net > 0
+                          ? 'settlement-net-pos'
+                          : net < 0
+                            ? 'settlement-net-neg'
+                            : 'muted'
+                      }
+                    >
+                      {formatSignedWon(net)}
+                    </span>
+                  </span>
+                ))}
+              </span>
+            )}
 
             {/* Colored connector bridging to the next row — same color as this
                 segment's line on the map, so the route is easy to follow across

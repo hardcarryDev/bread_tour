@@ -307,6 +307,46 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Per-spot bill settlement (정산). One row per spot. payer_ids /
+      // participant_ids are member user_ids. tour_id is set by the
+      // sync_settlement_tour_id trigger from the spot, so it is optional on
+      // insert (mirrors stamps).
+      spot_settlements: {
+        Row: {
+          id: string;
+          spot_id: string;
+          tour_id: string;
+          amount: number;
+          payer_ids: string[];
+          participant_ids: string[];
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          spot_id: string;
+          tour_id?: string;
+          amount?: number;
+          payer_ids?: string[];
+          participant_ids?: string[];
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          spot_id?: string;
+          tour_id?: string;
+          amount?: number;
+          payer_ids?: string[];
+          participant_ids?: string[];
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -359,5 +399,7 @@ export type Spot = Database['public']['Tables']['spots']['Row'];
 export type SpotKindRow = Database['public']['Tables']['spot_kinds']['Row'];
 export type SpotMenu = Database['public']['Tables']['spot_menus']['Row'];
 export type Stamp = Database['public']['Tables']['stamps']['Row'];
+export type SpotSettlement =
+  Database['public']['Tables']['spot_settlements']['Row'];
 export type ManualCheckInRequest =
   Database['public']['Tables']['manual_checkin_requests']['Row'];

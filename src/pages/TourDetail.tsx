@@ -30,6 +30,13 @@ import {
   type SpotMenuWithAuthor,
 } from '../features/menu/api';
 import { useStamps } from '../features/stamp/useStamps';
+import { useSettlements } from '../features/settlement/useSettlements';
+import {
+  deleteSettlement,
+  upsertSettlement,
+} from '../features/settlement/api';
+import SettlementModal from '../features/settlement/SettlementModal';
+import SettlementSummary from '../features/settlement/SettlementSummary';
 import { usePendingCheckIns } from '../features/stamp/usePendingCheckIns';
 import { useGeoStamp } from '../features/stamp/useGeoStamp';
 import {
@@ -176,6 +183,12 @@ export default function TourDetail() {
   // Slice C: stamp status (REQ-F1-005) + GPS auto-stamp pipeline (F1) + directions.
   const { stampBySpot, stampedSpotIds, reload: reloadStamps } = useStamps(tourId);
 
+  // Slice E: per-spot settlements (정산). One row per spot, keyed by spot_id.
+  const { settlementBySpot, reload: reloadSettlements } =
+    useSettlements(tourId);
+  // The spot whose settlement editor is open (null = closed).
+  const [settlingSpotId, setSettlingSpotId] = useState<string | null>(null);
+
   // TEMP PREVIEW — remove later. Force the first stamp to show as 획득 so the
   // stamped-row design is visible without a real GPS check-in. Only affects the
   // StampProgress list below; MapView and StampTracker keep the real stampBySpot.
@@ -296,6 +309,41 @@ export default function TourDetail() {
     try {
       await cancelManualCheckIn(requestId);
       reloadPendingCheckIns();
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
+  }
+
+  // Save (create or replace) a spot's settlement (정산). Any member may save; RLS
+  // is the real guard. The single-row-per-spot upsert overwrites any prior bill.
+  async function handleSaveSettlement(
+    spotId: string,
+    v: { amount: number; payerIds: string[]; participantIds: string[] },
+  ) {
+    if (!tourId || !user) return;
+    setActionError(null);
+    try {
+      await upsertSettlement({
+        spotId,
+        tourId,
+        amount: v.amount,
+        payerIds: v.payerIds,
+        participantIds: v.participantIds,
+        userId: user.id,
+      });
+      setSettlingSpotId(null);
+      reloadSettlements();
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
+  }
+
+  async function handleDeleteSettlement(spotId: string) {
+    setActionError(null);
+    try {
+      await deleteSettlement(spotId);
+      setSettlingSpotId(null);
+      reloadSettlements();
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -807,6 +855,11 @@ export default function TourDetail() {
             sortMode={sortMode}
             distanceBySpot={distanceBySpot}
             menusBySpot={menusBySpot}
+            // Settlement (정산): per-row caption + 정산 button (any member).
+            settlementBySpot={settlementBySpot}
+            onSettle={setSettlingSpotId}
+            members={members}
+            profileNames={profileNames}
           />
         )}
 
@@ -895,6 +948,13 @@ export default function TourDetail() {
           mode={travelMode}
           onModeChange={setTravelMode}
         />
+
+        {/* Tour-wide settlement summary (정산 요약): each member's total net +
+            suggested transfers. Renders only when a settlement exists. */}
+        <SettlementSummary
+          settlements={Object.values(settlementBySpot)}
+          profileNames={profileNames}
+        />
       </section>
 
       {/* GPS auto-stamp control + progress (F1 / NFR-GEO). */}
@@ -936,6 +996,26 @@ export default function TourDetail() {
           </button>
         </section>
       )}
+
+      {/* Settlement editor (정산): opens for the chosen spot. Any member may
+          save/delete; RLS is the real guard. */}
+      {settlingSpotId &&
+        (() => {
+          const spot = spots.find((s) => s.id === settlingSpotId);
+          if (!spot) return null;
+          return (
+            <SettlementModal
+              spot={spot}
+              members={members}
+              profileNames={profileNames}
+              currentUserId={user?.id}
+              existing={settlementBySpot[settlingSpotId]}
+              onSave={(v) => void handleSaveSettlement(settlingSpotId, v)}
+              onDelete={() => void handleDeleteSettlement(settlingSpotId)}
+              onClose={() => setSettlingSpotId(null)}
+            />
+          );
+        })()}
 
       {/* Non-destructive conflict notices (NFR-CONFLICT-003 / AC-NFR-CONFLICT-02). */}
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
