@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   spotNetByUser,
+  spotOutstandingByUser,
   suggestedTransfers,
   tourNetByUser,
+  tourOutstandingByUser,
   type SettlementInput,
 } from './compute';
 
@@ -14,6 +16,7 @@ describe('spotNetByUser (per-spot net = paid − share)', () => {
       amount: 12000,
       payerIds: ['u1'],
       participantIds: ['u1', 'u2', 'u3'],
+      settledIds: [],
     };
     expect(spotNetByUser(s)).toEqual({ u1: 8000, u2: -4000, u3: -4000 });
   });
@@ -23,6 +26,7 @@ describe('spotNetByUser (per-spot net = paid − share)', () => {
       amount: 12000,
       payerIds: ['u1'],
       participantIds: ['u1', 'u2'],
+      settledIds: [],
     };
     expect(spotNetByUser(s)).toEqual({ u1: 6000, u2: -6000 });
   });
@@ -34,6 +38,7 @@ describe('spotNetByUser (per-spot net = paid − share)', () => {
       amount: 10000,
       payerIds: ['u1', 'u2'],
       participantIds: ['u1', 'u2', 'u3', 'u4'],
+      settledIds: [],
     };
     expect(spotNetByUser(s)).toEqual({
       u1: 2500,
@@ -50,6 +55,7 @@ describe('spotNetByUser (per-spot net = paid − share)', () => {
       amount: 9000,
       payerIds: ['u1'],
       participantIds: ['u2', 'u3', 'u4'],
+      settledIds: [],
     };
     expect(spotNetByUser(s)).toEqual({
       u1: 9000,
@@ -66,21 +72,37 @@ describe('spotNetByUser (per-spot net = paid − share)', () => {
       amount: 8000,
       payerIds: ['u1'],
       participantIds: ['u1', 'u2'],
+      settledIds: [],
     };
     expect(spotNetByUser(s)).toEqual({ u1: 4000, u2: -4000 });
   });
 
   it('empty participant/payer arrays do not divide by zero (all zero / absent)', () => {
-    expect(spotNetByUser({ amount: 5000, payerIds: [], participantIds: [] })).toEqual(
-      {},
-    );
+    expect(
+      spotNetByUser({
+        amount: 5000,
+        payerIds: [],
+        participantIds: [],
+        settledIds: [],
+      }),
+    ).toEqual({});
     // Payer with no participants: paidPer applies, sharePer is 0.
     expect(
-      spotNetByUser({ amount: 5000, payerIds: ['u1'], participantIds: [] }),
+      spotNetByUser({
+        amount: 5000,
+        payerIds: ['u1'],
+        participantIds: [],
+        settledIds: [],
+      }),
     ).toEqual({ u1: 5000 });
     // Participants with no payer: everyone owes their share, no one is paid.
     expect(
-      spotNetByUser({ amount: 6000, payerIds: [], participantIds: ['u1', 'u2'] }),
+      spotNetByUser({
+        amount: 6000,
+        payerIds: [],
+        participantIds: ['u1', 'u2'],
+        settledIds: [],
+      }),
     ).toEqual({ u1: -3000, u2: -3000 });
   });
 
@@ -91,6 +113,7 @@ describe('spotNetByUser (per-spot net = paid − share)', () => {
       amount: 10000,
       payerIds: ['u1'],
       participantIds: ['u1', 'u2', 'u3'],
+      settledIds: [],
     };
     expect(spotNetByUser(s)).toEqual({ u1: 6667, u2: -3333, u3: -3333 });
   });
@@ -102,8 +125,18 @@ describe('tourNetByUser (sum nets across spots)', () => {
     // Spot 2: u2 paid 6000, shared by u2,u3 (3000 each) -> u2 +3000, u3 −3000.
     // Totals: u1 +8000, u2 −1000, u3 −7000.
     const settlements: SettlementInput[] = [
-      { amount: 12000, payerIds: ['u1'], participantIds: ['u1', 'u2', 'u3'] },
-      { amount: 6000, payerIds: ['u2'], participantIds: ['u2', 'u3'] },
+      {
+        amount: 12000,
+        payerIds: ['u1'],
+        participantIds: ['u1', 'u2', 'u3'],
+        settledIds: [],
+      },
+      {
+        amount: 6000,
+        payerIds: ['u2'],
+        participantIds: ['u2', 'u3'],
+        settledIds: [],
+      },
     ];
     expect(tourNetByUser(settlements)).toEqual({
       u1: 8000,
@@ -114,6 +147,104 @@ describe('tourNetByUser (sum nets across spots)', () => {
 
   it('returns an empty map for no settlements', () => {
     expect(tourNetByUser([])).toEqual({});
+  });
+});
+
+describe('spotOutstandingByUser (settled owers cleared, payer reduced)', () => {
+  it('with no settled ids, outstanding equals gross net', () => {
+    const s: SettlementInput = {
+      amount: 12000,
+      payerIds: ['u1'],
+      participantIds: ['u1', 'u2', 'u3'],
+      settledIds: [],
+    };
+    expect(spotOutstandingByUser(s)).toEqual(spotNetByUser(s));
+    expect(spotOutstandingByUser(s)).toEqual({ u1: 8000, u2: -4000, u3: -4000 });
+  });
+
+  it('one ower settled: that ower becomes 0, payer receivable drops by the share', () => {
+    // 20,000 by u1, 5 participants -> 4,000 share each. Gross: u1 +16000, others −4000.
+    // u5 settled -> u5: 0; payer: 16000 − 4000 = 12000; u2/u3/u4 still −4000.
+    const s: SettlementInput = {
+      amount: 20000,
+      payerIds: ['u1'],
+      participantIds: ['u1', 'u2', 'u3', 'u4', 'u5'],
+      settledIds: ['u5'],
+    };
+    expect(spotOutstandingByUser(s)).toEqual({
+      u1: 12000,
+      u2: -4000,
+      u3: -4000,
+      u4: -4000,
+      u5: 0,
+    });
+  });
+
+  it('all owers settled: everyone is 0 (payer fully paid back)', () => {
+    const s: SettlementInput = {
+      amount: 12000,
+      payerIds: ['u1'],
+      participantIds: ['u1', 'u2', 'u3'],
+      settledIds: ['u2', 'u3'],
+    };
+    expect(spotOutstandingByUser(s)).toEqual({ u1: 0, u2: 0, u3: 0 });
+  });
+
+  it('ignores a stale settled id that is the payer or not a participant', () => {
+    // u1 is the payer (cannot be settled); u9 is not a participant -> both ignored.
+    const s: SettlementInput = {
+      amount: 12000,
+      payerIds: ['u1'],
+      participantIds: ['u1', 'u2', 'u3'],
+      settledIds: ['u1', 'u9'],
+    };
+    expect(spotOutstandingByUser(s)).toEqual({ u1: 8000, u2: -4000, u3: -4000 });
+  });
+});
+
+describe('tourOutstandingByUser (sum outstanding across spots)', () => {
+  it('sums outstanding, excluding settled shares', () => {
+    // Spot 1: 20,000 by u1, 5 ppl, u5 settled -> u1 +12000, u2/u3/u4 −4000, u5 0.
+    // Spot 2: 6,000 by u2, shared u2,u3 (3,000) -> u2 +3000, u3 −3000.
+    // Totals: u1 +12000, u2 −1000, u3 −7000, u4 −4000, u5 0.
+    const settlements: SettlementInput[] = [
+      {
+        amount: 20000,
+        payerIds: ['u1'],
+        participantIds: ['u1', 'u2', 'u3', 'u4', 'u5'],
+        settledIds: ['u5'],
+      },
+      {
+        amount: 6000,
+        payerIds: ['u2'],
+        participantIds: ['u2', 'u3'],
+        settledIds: [],
+      },
+    ];
+    expect(tourOutstandingByUser(settlements)).toEqual({
+      u1: 12000,
+      u2: -1000,
+      u3: -7000,
+      u4: -4000,
+      u5: 0,
+    });
+  });
+
+  it('feeds suggestedTransfers so settled shares are excluded from 보낼 돈', () => {
+    // 12,000 by u1, 3 ppl (4,000 each); u2 settled. Outstanding: u1 +4000, u3 −4000.
+    // Only u3 -> u1 remains as a transfer.
+    const settlements: SettlementInput[] = [
+      {
+        amount: 12000,
+        payerIds: ['u1'],
+        participantIds: ['u1', 'u2', 'u3'],
+        settledIds: ['u2'],
+      },
+    ];
+    const outstanding = tourOutstandingByUser(settlements);
+    expect(suggestedTransfers(outstanding)).toEqual([
+      { fromUserId: 'u3', toUserId: 'u1', amount: 4000 },
+    ]);
   });
 });
 

@@ -64,13 +64,75 @@ describe('SettlementModal', () => {
         onClose={vi.fn()}
       />,
     );
-    // Default: all participants checked, current user (u1) is the only payer.
+    // Default: all participants checked, current user (u1) is the single payer.
     await userEvent.type(screen.getByTestId('settlement-amount'), '12000');
     await userEvent.click(screen.getByTestId('settlement-save'));
     expect(onSave).toHaveBeenCalledWith({
       amount: 12000,
       payerIds: ['u1'],
       participantIds: ['u1', 'u2'],
+      settledIds: [],
+    });
+  });
+
+  it('payer is single-select: choosing a second payer replaces the first', async () => {
+    const onSave = vi.fn();
+    render(
+      <SettlementModal
+        spot={spot}
+        members={members}
+        profileNames={profileNames}
+        currentUserId="u1"
+        existing={undefined}
+        onSave={onSave}
+        onDelete={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    // Two radios (one per member) within the 결제자 section.
+    const payerRadios = screen.getAllByRole('radio');
+    expect(payerRadios).toHaveLength(2);
+    // u1 (홍길동) is the default payer; select u2 (김철수) -> replaces u1.
+    await userEvent.click(payerRadios[1]);
+    expect(payerRadios[1]).toBeChecked();
+    expect(payerRadios[0]).not.toBeChecked();
+
+    await userEvent.type(screen.getByTestId('settlement-amount'), '12000');
+    await userEvent.click(screen.getByTestId('settlement-save'));
+    expect(onSave).toHaveBeenCalledWith({
+      amount: 12000,
+      payerIds: ['u2'],
+      participantIds: ['u1', 'u2'],
+      settledIds: [],
+    });
+  });
+
+  it('toggling a 보냄 checkbox includes that ower in settledIds on save', async () => {
+    const onSave = vi.fn();
+    render(
+      <SettlementModal
+        spot={spot}
+        members={members}
+        profileNames={profileNames}
+        currentUserId="u1"
+        existing={undefined}
+        onSave={onSave}
+        onDelete={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    // u1 is payer; u2 is the only ower -> only u2 has a 보냄 checkbox.
+    await userEvent.type(screen.getByTestId('settlement-amount'), '12000');
+    await userEvent.click(screen.getByTestId('settlement-sent-u2'));
+    // No 보냄 checkbox for the payer (u1) — the payer is never settled.
+    expect(screen.queryByTestId('settlement-sent-u1')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('settlement-save'));
+    expect(onSave).toHaveBeenCalledWith({
+      amount: 12000,
+      payerIds: ['u1'],
+      participantIds: ['u1', 'u2'],
+      settledIds: ['u2'],
     });
   });
 
@@ -101,6 +163,7 @@ describe('SettlementModal', () => {
       amount: 12000,
       payer_ids: ['u1'],
       participant_ids: ['u1', 'u2'],
+      settled_ids: [],
       created_by: 'u1',
       created_at: 'x',
       updated_at: 'x',
@@ -143,6 +206,7 @@ describe('SettlementModal', () => {
       amount: 12000,
       payer_ids: ['u1'],
       participant_ids: ['u1', 'u2'],
+      settled_ids: [],
       created_by: 'u1',
       created_at: 'x',
       updated_at: 'x',
@@ -161,5 +225,42 @@ describe('SettlementModal', () => {
     );
     await userEvent.click(screen.getByTestId('settlement-delete'));
     expect(onDelete).toHaveBeenCalled();
+  });
+
+  it('pre-checks 보냄 from existing settled_ids and preserves it on save', async () => {
+    const onSave = vi.fn();
+    const existing: SpotSettlement = {
+      id: 'se1',
+      spot_id: 's1',
+      tour_id: 't1',
+      amount: 12000,
+      payer_ids: ['u1'],
+      participant_ids: ['u1', 'u2'],
+      settled_ids: ['u2'],
+      created_by: 'u1',
+      created_at: 'x',
+      updated_at: 'x',
+    };
+    render(
+      <SettlementModal
+        spot={spot}
+        members={members}
+        profileNames={profileNames}
+        currentUserId="u1"
+        existing={existing}
+        onSave={onSave}
+        onDelete={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    // u2 is the only ower and was already settled -> its 보냄 box is pre-checked.
+    expect(screen.getByTestId('settlement-sent-u2')).toBeChecked();
+    await userEvent.click(screen.getByTestId('settlement-save'));
+    expect(onSave).toHaveBeenCalledWith({
+      amount: 12000,
+      payerIds: ['u1'],
+      participantIds: ['u1', 'u2'],
+      settledIds: ['u2'],
+    });
   });
 });

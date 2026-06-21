@@ -34,6 +34,7 @@ export async function upsertSettlement(params: {
   amount: number;
   payerIds: string[];
   participantIds: string[];
+  settledIds: string[];
   userId: string;
 }): Promise<SpotSettlement> {
   const { data, error } = await supabase
@@ -45,6 +46,7 @@ export async function upsertSettlement(params: {
         amount: params.amount,
         payer_ids: params.payerIds,
         participant_ids: params.participantIds,
+        settled_ids: params.settledIds,
         created_by: params.userId,
       },
       { onConflict: 'spot_id' },

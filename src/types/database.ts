@@ -319,6 +319,8 @@ export type Database = {
           amount: number;
           payer_ids: string[];
           participant_ids: string[];
+          // Participants who have already sent their share to the payer.
+          settled_ids: string[];
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -330,6 +332,7 @@ export type Database = {
           amount?: number;
           payer_ids?: string[];
           participant_ids?: string[];
+          settled_ids?: string[];
           created_by: string;
           created_at?: string;
           updated_at?: string;
@@ -341,6 +344,7 @@ export type Database = {
           amount?: number;
           payer_ids?: string[];
           participant_ids?: string[];
+          settled_ids?: string[];
           created_by?: string;
           created_at?: string;
           updated_at?: string;

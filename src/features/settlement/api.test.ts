@@ -39,6 +39,7 @@ function settlementRow(
     amount: 12000,
     payer_ids: ['u1'],
     participant_ids: ['u1', 'u2'],
+    settled_ids: [],
     created_by: 'u1',
     created_at: 'x',
     updated_at: 'x',
@@ -88,6 +89,7 @@ describe('upsertSettlement (one row per spot, onConflict spot_id)', () => {
       amount: 12000,
       payerIds: ['u1'],
       participantIds: ['u1', 'u2'],
+      settledIds: ['u2'],
       userId: 'u1',
     });
 
@@ -99,6 +101,7 @@ describe('upsertSettlement (one row per spot, onConflict spot_id)', () => {
       amount: 12000,
       payer_ids: ['u1'],
       participant_ids: ['u1', 'u2'],
+      settled_ids: ['u2'],
       created_by: 'u1',
     });
     const options = b.upsert.mock.calls[0][1] as Record<string, unknown>;
@@ -116,6 +119,7 @@ describe('upsertSettlement (one row per spot, onConflict spot_id)', () => {
         amount: 12000,
         payerIds: ['u1'],
         participantIds: ['u1'],
+        settledIds: [],
         userId: 'u1',
       }),
     ).rejects.toThrow('forbidden');

@@ -306,7 +306,12 @@ export default function TourDetail() {
   // is the real guard. The single-row-per-spot upsert overwrites any prior bill.
   async function handleSaveSettlement(
     spotId: string,
-    v: { amount: number; payerIds: string[]; participantIds: string[] },
+    v: {
+      amount: number;
+      payerIds: string[];
+      participantIds: string[];
+      settledIds: string[];
+    },
   ) {
     if (!tourId || !user) return;
     setActionError(null);
@@ -317,6 +322,7 @@ export default function TourDetail() {
         amount: v.amount,
         payerIds: v.payerIds,
         participantIds: v.participantIds,
+        settledIds: v.settledIds,
         userId: user.id,
       });
       setSettlingSpotId(null);

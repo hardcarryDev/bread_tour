@@ -11,7 +11,7 @@ import type { SpotSettlement } from '../../types/database';
 import { displayNameFor, type DisplayNameMap } from '../profile/api';
 import {
   suggestedTransfers,
-  tourNetByUser,
+  tourOutstandingByUser,
   type SettlementInput,
 } from './compute';
 import { formatSignedWon, formatWon } from './format';
@@ -31,14 +31,17 @@ export default function SettlementSummary({
     amount: s.amount,
     payerIds: s.payer_ids,
     participantIds: s.participant_ids,
+    settledIds: s.settled_ids,
   }));
-  const netByUser = tourNetByUser(inputs);
-  // Only members with a non-zero net are interesting (sorted by id for stable
-  // display, matching the deterministic transfer ordering).
-  const nonZero = Object.entries(netByUser)
+  // OUTSTANDING (settled-aware): owers who already paid the payer back are
+  // excluded, so the totals + transfer list reflect only what is STILL owed.
+  const outstandingByUser = tourOutstandingByUser(inputs);
+  // Only members with a non-zero outstanding amount are interesting (sorted by id
+  // for stable display, matching the deterministic transfer ordering).
+  const nonZero = Object.entries(outstandingByUser)
     .filter(([, v]) => v !== 0)
     .sort(([a], [b]) => a.localeCompare(b));
-  const transfers = suggestedTransfers(netByUser);
+  const transfers = suggestedTransfers(outstandingByUser);
 
   // Nothing owed either direction -> nothing to render.
   if (nonZero.length === 0 && transfers.length === 0) return null;

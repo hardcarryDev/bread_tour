@@ -135,14 +135,20 @@ export default function SpotList({
         // the move()/disabled logic (independent of the displayed order).
         const planIndex = planOrdered.findIndex((s) => s.id === spot.id);
         const dist = sortMode ? distanceBySpot?.[spot.id] : undefined;
-        // Settlement caption parts (정산): per-person net for this spot, if any.
+        // Settlement caption parts (정산): per-person GROSS net for this spot, if
+        // any. Settled owers (settled_ids) keep their gross amount but are marked
+        // 완료 below.
         const settlement = settlementBySpot[spot.id];
         const settlementNets = settlement
           ? spotNetByUser({
               amount: settlement.amount,
               payerIds: settlement.payer_ids,
               participantIds: settlement.participant_ids,
+              settledIds: settlement.settled_ids,
             })
+          : null;
+        const settledSet = settlement
+          ? new Set(settlement.settled_ids)
           : null;
 
         // Inline edit: replace this row's content with the editor (the edit form
@@ -292,23 +298,31 @@ export default function SpotList({
                 data-testid={`spot-settlement-${spot.id}`}
               >
                 정산 {formatWon(settlement.amount)}
-                {Object.entries(settlementNets).map(([userId, net]) => (
-                  <span key={userId} className="spot-settlement-part">
-                    {' · '}
-                    {displayNameFor(userId, profileNames)}{' '}
-                    <span
-                      className={
-                        net > 0
-                          ? 'settlement-net-pos'
-                          : net < 0
-                            ? 'settlement-net-neg'
-                            : 'muted'
-                      }
-                    >
-                      {formatSignedWon(net)}
+                {Object.entries(settlementNets).map(([userId, net]) => {
+                  const isSettled = settledSet?.has(userId) ?? false;
+                  return (
+                    <span key={userId} className="spot-settlement-part">
+                      {' · '}
+                      {displayNameFor(userId, profileNames)}{' '}
+                      <span
+                        className={
+                          isSettled
+                            ? 'settlement-net-done'
+                            : net > 0
+                              ? 'settlement-net-pos'
+                              : net < 0
+                                ? 'settlement-net-neg'
+                                : 'muted'
+                        }
+                      >
+                        {formatSignedWon(net)}
+                      </span>
+                      {isSettled && (
+                        <span className="settlement-done-tag"> ✓완료</span>
+                      )}
                     </span>
-                  </span>
-                ))}
+                  );
+                })}
               </span>
             )}
 
