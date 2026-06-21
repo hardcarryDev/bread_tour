@@ -176,7 +176,7 @@ export default function SettlementModal({
           {existing && (
             <button
               type="button"
-              className="link-button danger"
+              className="btn-danger-ghost"
               data-testid="settlement-delete"
               onClick={onDelete}
             >

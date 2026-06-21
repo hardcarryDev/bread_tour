@@ -107,6 +107,30 @@ button.danger {
   background: #c0392b;
 }
 
+/* Lightweight destructive action (inline 취소/삭제) — a soft outlined pill
+   instead of a heavy solid-red block. Fills red on hover. */
+button.btn-danger-ghost {
+  background: #fdecea;
+  color: #b91c1c;
+  border: 1px solid #f3c0bb;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  min-height: 36px;
+  padding: 0.35rem 0.8rem;
+}
+
+button.btn-danger-ghost:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #fff;
+}
+
+/* In a modal action row, the destructive button sits apart on the left. */
+.modal-actions .btn-danger-ghost {
+  margin-right: auto;
+}
+
 .form-error {
   color: #c0392b;
   margin: 0;

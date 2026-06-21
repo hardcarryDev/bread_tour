@@ -78,7 +78,7 @@ export default function StampProgress({
             {canCancel && (
               <button
                 type="button"
-                className="link-button danger"
+                className="btn-danger-ghost stamp-cancel"
                 aria-label={`스탬프 취소: ${spot.name}`}
                 onClick={() => onCancel(status!.stampId!)}
               >
